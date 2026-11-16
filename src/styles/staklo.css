@@ -1,0 +1,96 @@
+/*
+ * Staklo. Ovo je web aproksimacija (backdrop-filter + ivice + odsjaj),
+ * ne Appleov Liquid Glass, koji postoji samo na Apple platformama.
+ *
+ * Pravilo: najviše tri ovakve površine na ekranu u isto vrijeme.
+ * Za sve ostalo koristi se .podloga (ista boja, bez blura).
+ */
+.staklo {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--r-velik);
+  background: rgb(var(--staklo-rgb) / var(--staklo-a));
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  box-shadow:
+    /* svjetlo koje hvata gornji rub i malo se razlije u staklo */
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    inset 0 16px 22px -20px rgb(255 255 255 / 0.2),
+    /* slabiji odraz na donjem rubu */
+    inset 0 -14px 20px -18px rgb(255 255 255 / 0.1),
+    0 22px 44px -22px rgb(0 0 0 / 0.5);
+}
+
+/* Blagi odsjaj u gornjem lijevom uglu. Ograničen na vrh, gdje je samo naslov. */
+.staklo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    166deg,
+    rgb(255 255 255 / 0.08) 0%,
+    rgb(255 255 255 / 0.02) 22%,
+    rgb(255 255 255 / 0) 38%
+  );
+}
+
+/* Rub: svijetao gore lijevo, gasi se, pa se malo vrati dolje desno, kao na pravom staklu. */
+.staklo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    158deg,
+    rgb(255 255 255 / 0.5) 0%,
+    rgb(255 255 255 / 0.12) 32%,
+    rgb(255 255 255 / 0.05) 62%,
+    rgb(255 255 255 / 0.24) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+
+/* Ista boja kao staklo, bez blura. Za površine kojih ima više na ekranu. */
+.podloga {
+  border-radius: var(--r-velik);
+  background: rgb(var(--staklo-rgb) / var(--staklo-a));
+}
+
+/* Bez backdrop-filtera staklo bi bilo samo proziran sloj: zato puna boja. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .staklo {
+    background: var(--staklo-cvrsto);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .staklo,
+  .podloga {
+    background: var(--staklo-cvrsto);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .staklo,
+  .podloga {
+    background: var(--staklo-cvrsto);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    outline: 1px solid rgb(255 255 255 / 0.6);
+    outline-offset: -1px;
+  }
+}

@@ -1,0 +1,63 @@
+/* Učitavanje, smanjeno kretanje i slučaj bez JavaScripta. */
+
+/* Kostur ima oblik onoga što dolazi, da ekran ne skoči kad prognoza stigne. */
+.kostur--kartica {
+  height: 172px;
+  margin-top: 30px;
+  border-radius: var(--r-velik);
+}
+
+.kostur--blok {
+  height: 260px;
+  margin-top: 14px;
+  border-radius: var(--r-velik);
+}
+
+/*
+ * Smanjeno kretanje: listovi ne klize, nego se kratko pretope.
+ * Bez ikakvog prelaza promjena bi bila nagla, a klizanje preko cijelog ekrana smeta.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .list,
+  .pretraga {
+    opacity: 0;
+    transition:
+      opacity var(--brzo) ease-out,
+      overlay var(--brzo) allow-discrete,
+      display var(--brzo) allow-discrete;
+  }
+
+  .list[open],
+  .pretraga[open] {
+    opacity: 1;
+  }
+
+  @starting-style {
+    .list[open],
+    .pretraga[open] {
+      opacity: 0;
+    }
+  }
+
+  .dugme,
+  .okruglo,
+  .ves {
+    transition: none;
+  }
+
+  .dugme:active,
+  .okruglo:active,
+  .ves:has(.kartica__vise:active) {
+    transform: none;
+  }
+}
+
+/* Bez JavaScripta nema prognoze: bar reci zašto je ekran prazan. */
+.bez-js {
+  max-width: 430px;
+  margin: 0 auto;
+  padding: 72px 20px;
+  font-size: 1.4375rem;
+  line-height: 1.25;
+  font-weight: 600;
+}

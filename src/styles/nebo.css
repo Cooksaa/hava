@@ -1,0 +1,69 @@
+/*
+ * Nebo. Boje su registrovane kao prave boje, pa se mogu pretapati kad se
+ * stanje promijeni (običan gradient ne može). Gdje @property nije podržan,
+ * boje se samo zamijene bez prelaza.
+ */
+@property --nebo-1 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #0a1322;
+}
+
+@property --nebo-2 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #121e36;
+}
+
+@property --nebo-3 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #1c2b48;
+}
+
+@property --sjaj-a {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --polozaj {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0.5;
+}
+
+:root {
+  --sjaj-rgb: 255 255 255;
+  --sjaj-y: 6%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root {
+    /* Duže od ostalih prelaza: mijenja se cijeli ekran, brzo bi bljesnulo. */
+    transition:
+      --nebo-1 700ms ease-out,
+      --nebo-2 700ms ease-out,
+      --nebo-3 700ms ease-out,
+      --sjaj-a 700ms ease-out,
+      --polozaj 700ms ease-out;
+  }
+}
+
+.nebo {
+  position: fixed;
+  inset: 0;
+  /* lvh: da se ne pojavi praznina kad se traka preglednika sakrije. */
+  height: 100lvh;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    /* Sunce ili mjesec: putuje slijeva nadesno kroz dan. */
+    radial-gradient(
+      circle at calc(14% + var(--polozaj) * 72%) var(--sjaj-y),
+      rgb(var(--sjaj-rgb) / var(--sjaj-a)) 0,
+      rgb(var(--sjaj-rgb) / calc(var(--sjaj-a) * 0.4)) 24vmin,
+      rgb(var(--sjaj-rgb) / 0) 64vmin
+    ),
+    linear-gradient(180deg, var(--nebo-1) 0%, var(--nebo-2) 55%, var(--nebo-3) 100%);
+}

@@ -1,0 +1,75 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: 1.45;
+  font-optical-sizing: auto;
+  color: var(--tekst);
+  /* Boja iza neba: vidi se samo pri povlačenju preko ruba. */
+  background: var(--nebo-1);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+svg {
+  display: block;
+}
+
+:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.broj {
+  font-variant-numeric: tabular-nums;
+}
+
+.ikona {
+  width: 1em;
+  height: 1em;
+  flex: none;
+}
+
+/* Phosphor crta ispunom, Meteocons nosi boje u samim putanjama. */
+.ikona--ui {
+  fill: currentColor;
+}
+
+.ikona--vrijeme {
+  fill: none;
+}

@@ -1,0 +1,24 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "prognoza",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "pregled",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview"],
+      "port": 4173
+    },
+    {
+      "name": "pregled-pages",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "preview", "--base", "/prognoza/"],
+      "port": 4173,
+      "url": "http://localhost:4173"
+    }
+  ]
+}

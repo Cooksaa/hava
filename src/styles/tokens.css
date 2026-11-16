@@ -1,0 +1,37 @@
+:root {
+  --font: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /*
+   * Tekst je uvijek bijel. Kontrast rješava podloga: gornji dio neba je taman,
+   * a niže tekst stoji samo na staklu. Sporedni tekst (--tekst-tihi) smije
+   * samo na staklo, nikad direktno na nebo.
+   */
+  --tekst: #ffffff;
+  --tihi-a: 0.8;
+  --tekst-tihi: rgb(255 255 255 / var(--tihi-a));
+
+  /* Boja se koristi samo kad nešto znači. */
+  --moze: #35b58a;
+  --pazi: #e9b949;
+  --nemoj: #e2604f;
+  /* Svijetlija nego što bi se očekivalo: znak mora biti vidljiv i na dnevnom staklu. */
+  --kisa: #b3dbff;
+  /* Tamna boja za znak na obojenoj podlozi. */
+  --tinta: #0b1a2b;
+
+  /* Radijusi po pravilu: velika površina 28, unutrašnji element 14, dugme pilula. */
+  --r-velik: 28px;
+  --r-mali: 14px;
+  --r-pilula: 999px;
+
+  --rub: 20px;
+
+  /* Staklo: vrijednosti po stanju neba postavlja ui/pozadina.ts. */
+  --staklo-rgb: 255 255 255;
+  --staklo-a: 0.07;
+  --staklo-cvrsto: #1c2b48;
+
+  --brzo: 150ms;
+  --mirno: 280ms;
+  --izlaz: cubic-bezier(0.22, 1, 0.36, 1);
+}

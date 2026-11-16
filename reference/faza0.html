@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1720">
+<title>Prognoza</title>
+<style>
+  :root{
+    --bg:#0f1720; --card:#17212c; --card2:#1e2a37; --txt:#e8eef4; --mut:#8fa1b3;
+    --acc:#4fb3ff; --ok:#3ecf8e; --warn:#f5c04a; --bad:#ff6b6b; --orange:#ff9f43;
+    --r:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--txt);
+       max-width:520px;margin:0 auto;padding:16px 14px 40px;-webkit-font-smoothing:antialiased}
+  button{font:inherit;color:inherit;border:0;cursor:pointer}
+  .top{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+  .loc{flex:1;font-weight:700;font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .iconbtn{background:var(--card);border-radius:12px;padding:9px 12px;font-size:15px}
+  .search{display:none;margin-bottom:12px}
+  .search.open{display:block}
+  .search input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #2b3a4a;background:var(--card);color:var(--txt);font-size:16px}
+  .results button{display:block;width:100%;text-align:left;background:var(--card);margin-top:6px;padding:11px 14px;border-radius:12px}
+  .results small{color:var(--mut)}
+  .card{background:var(--card);border-radius:var(--r);padding:16px;margin-bottom:12px}
+  .now{display:flex;align-items:center;gap:14px}
+  .now .ico{font-size:58px;line-height:1}
+  .now .t{font-size:52px;font-weight:700;letter-spacing:-2px}
+  .now .d{color:var(--mut);font-size:14px;margin-top:2px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+  .stat{background:var(--card2);border-radius:12px;padding:9px;text-align:center}
+  .stat b{display:block;font-size:16px}
+  .stat span{font-size:11px;color:var(--mut)}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin-bottom:10px;font-weight:600}
+  .hours{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+  .hours::-webkit-scrollbar{display:none}
+  .h{flex:0 0 56px;text-align:center;background:var(--card2);border-radius:12px;padding:8px 0;font-size:13px}
+  .h .i{font-size:22px;margin:4px 0}
+  .h .p{color:var(--acc);font-size:11px;min-height:14px}
+  .day{display:grid;grid-template-columns:62px 30px 1fr 74px;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #243243;font-size:15px}
+  .day:first-of-type{border-top:0}
+  .day .p{color:var(--acc);font-size:12px}
+  .day .tt{text-align:right}
+  .day .tt span{color:var(--mut)}
+  .alarm{border-radius:var(--r);padding:12px 14px;margin-bottom:12px;font-size:14px;display:none}
+  .alarm.show{display:block}
+  .alarm b{display:block;margin-bottom:3px}
+  .alarm a{color:inherit}
+  .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+  .tab{background:var(--card);border-radius:14px;padding:12px 6px;text-align:center;font-size:14px;font-weight:600}
+  .tab .e{font-size:24px;display:block;margin-bottom:3px}
+  .tab.active{background:var(--acc);color:#04121f}
+  .panel{display:none}
+  .panel.open{display:block}
+  .verdict{border-left:5px solid var(--mut);padding-left:12px}
+  .verdict.ok{border-color:var(--ok)} .verdict.warn{border-color:var(--warn)} .verdict.bad{border-color:var(--bad)}
+  .verdict .big{font-size:19px;font-weight:700;line-height:1.3}
+  .verdict .sub{color:var(--mut);font-size:14px;margin-top:6px;line-height:1.45}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .chip{background:var(--card2);border-radius:20px;padding:7px 13px;font-size:14px}
+  .chip.active{background:var(--acc);color:#04121f}
+  .muted{color:var(--mut);font-size:13px}
+  .err{color:var(--bad);font-size:14px}
+  .foot{text-align:center;color:var(--mut);font-size:11px;margin-top:18px}
+  .foot a{color:var(--mut)}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="loc" id="locName">Učitavam…</div>
+  <button class="iconbtn" id="gpsBtn" title="Moja lokacija">📍</button>
+  <button class="iconbtn" id="searchBtn" title="Traži grad">🔍</button>
+</div>
+
+<div class="search" id="search">
+  <input id="q" placeholder="Upiši grad, npr. Čapljina" autocomplete="off">
+  <div class="results" id="results"></div>
+</div>
+
+<div class="alarm" id="alarm"></div>
+
+<div class="card" id="nowCard"><div class="muted">Učitavam prognozu…</div></div>
+
+<div class="tabs">
+  <button class="tab" data-p="ves"><span class="e">👕</span>Veš</button>
+  <button class="tab" data-p="put"><span class="e">🚗</span>Putujem</button>
+  <button class="tab" data-p="dron"><span class="e">🚁</span>Dron</button>
+</div>
+
+<div class="panel card" id="p-ves"></div>
+
+<div class="panel card" id="p-put">
+  <h2>Pada li u…?</h2>
+  <div class="chips" id="cityChips"></div>
+  <div id="putOut" class="muted">Izaberi grad.</div>
+</div>
+
+<div class="panel card" id="p-dron">
+  <h2>Dron</h2>
+  <div class="verdict"><div class="big">Uskoro 🛠️</div>
+  <div class="sub">Faza 2: izbor modela, vjetar na 80–120 m, DJI zone zabrane leta na mapi.</div></div>
+</div>
+
+<div class="card"><h2>Narednih 24 sata</h2><div class="hours" id="hours"></div></div>
+<div class="card"><h2>7 dana</h2><div id="days"></div></div>
+
+<div class="foot">Podaci: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> · Upozorenja: <a href="https://meteoalarm.org" target="_blank" rel="noopener">Meteoalarm</a> (FHMZ / RHMZ)</div>
+
+<script>
+/* ---------- Postavke ---------- */
+const DEFAULT_LOC = {name:"Čapljina", lat:43.1137, lon:17.6847};
+const CITIES = [
+  {name:"Čapljina", lat:43.1137, lon:17.6847},
+  {name:"Mostar",   lat:43.3438, lon:17.8078},
+  {name:"Konjic",   lat:43.6519, lon:17.9608},
+  {name:"Jablanica",lat:43.6603, lon:17.7617},
+  {name:"Sarajevo", lat:43.8563, lon:18.4131},
+  {name:"Neum",     lat:42.9233, lon:17.6156},
+];
+const METEOALARM_FEED = "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-bosnia-herzegovina";
+const DANI = ["Ned","Pon","Uto","Sri","Čet","Pet","Sub"];
+const DANI_PUNO = ["nedjelja","ponedjeljak","utorak","srijeda","četvrtak","petak","subota"];
+
+/* WMO weather_code -> [ikona, opis] */
+function wx(code, isDay=1){
+  const m = {
+    0:[isDay?"☀️":"🌙","Vedro"], 1:[isDay?"🌤️":"🌙","Pretežno vedro"], 2:["⛅","Djelimično oblačno"], 3:["☁️","Oblačno"],
+    45:["🌫️","Magla"], 48:["🌫️","Magla s injem"],
+    51:["🌦️","Slaba rosulja"], 53:["🌦️","Rosulja"], 55:["🌧️","Jaka rosulja"],
+    56:["🌧️","Ledena rosulja"], 57:["🌧️","Ledena rosulja"],
+    61:["🌦️","Slaba kiša"], 63:["🌧️","Kiša"], 65:["🌧️","Jaka kiša"],
+    66:["🌧️","Ledena kiša"], 67:["🌧️","Jaka ledena kiša"],
+    71:["🌨️","Slab snijeg"], 73:["🌨️","Snijeg"], 75:["❄️","Jak snijeg"], 77:["🌨️","Zrnca snijega"],
+    80:["🌦️","Pljuskovi"], 81:["🌧️","Pljuskovi"], 82:["⛈️","Jaki pljuskovi"],
+    85:["🌨️","Snježni pljuskovi"], 86:["❄️","Jaki snježni pljuskovi"],
+    95:["⛈️","Grmljavina"], 96:["⛈️","Grmljavina s gradom"], 99:["⛈️","Jaka grmljavina s gradom"],
+  };
+  return m[code] || ["🌡️","—"];
+}
+const $ = s => document.querySelector(s);
+const hr = t => +t.slice(11,13);                 // "2026-11-18T13:00" -> 13
+const dayOf = t => new Date(t.slice(0,10)+"T12:00");
+
+/* ---------- API ---------- */
+async function getForecast(lat, lon){
+  const p = new URLSearchParams({
+    latitude:lat, longitude:lon, timezone:"Europe/Sarajevo", forecast_days:7, wind_speed_unit:"kmh",
+    current:"temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,is_day,wind_speed_10m,wind_gusts_10m",
+    hourly:"temperature_2m,relative_humidity_2m,precipitation_probability,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_gusts_10m,is_day",
+    daily:"weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,sunrise,sunset",
+  });
+  const r = await fetch("https://api.open-meteo.com/v1/forecast?"+p);
+  if(!r.ok) throw new Error("Prognoza nije dostupna ("+r.status+")");
+  return r.json();
+}
+async function geocode(q){
+  const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=hr`);
+  const j = await r.json();
+  return j.results || [];
+}
+
+/* ---------- Glavni prikaz ---------- */
+let current = null;   // {name,lat,lon}
+let data = null;
+
+async function load(loc){
+  current = loc;
+  try{ localStorage.setItem("loc", JSON.stringify(loc)); }catch(e){}
+  $("#locName").textContent = loc.name;
+  $("#nowCard").innerHTML = '<div class="muted">Učitavam prognozu…</div>';
+  try{
+    data = await getForecast(loc.lat, loc.lon);
+    renderNow(); renderHours(); renderDays(); renderVes();
+  }catch(e){
+    $("#nowCard").innerHTML = `<div class="err">${e.message}. Provjeri internet pa osvježi.</div>`;
+  }
+}
+
+function nowIndex(){
+  const key = data.current.time.slice(0,13);
+  const i = data.hourly.time.findIndex(t => t.slice(0,13) === key);
+  return i < 0 ? 0 : i;
+}
+
+function renderNow(){
+  const c = data.current, [ico, txt] = wx(c.weather_code, c.is_day), d = data.daily;
+  $("#nowCard").innerHTML = `
+    <div class="now">
+      <div class="ico">${ico}</div>
+      <div><div class="t">${Math.round(c.temperature_2m)}°</div>
+      <div class="d">${txt} · osjećaj ${Math.round(c.apparent_temperature)}° · ${Math.round(d.temperature_2m_max[0])}° / ${Math.round(d.temperature_2m_min[0])}°</div></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>${Math.round(c.wind_speed_10m)}</b><span>vjetar km/h</span></div>
+      <div class="stat"><b>${Math.round(c.wind_gusts_10m)}</b><span>udari km/h</span></div>
+      <div class="stat"><b>${c.relative_humidity_2m}%</b><span>vlaga</span></div>
+    </div>`;
+}
+
+function renderHours(){
+  const h = data.hourly, s = nowIndex();
+  let out = "";
+  for(let i = s; i < Math.min(s+24, h.time.length); i++){
+    const [ico] = wx(h.weather_code[i], h.is_day[i]);
+    const pp = h.precipitation_probability[i];
+    out += `<div class="h"><div>${i===s?"Sad":hr(h.time[i])+"h"}</div><div class="i">${ico}</div>
+            <div>${Math.round(h.temperature_2m[i])}°</div><div class="p">${pp>=20?pp+"%":""}</div></div>`;
+  }
+  $("#hours").innerHTML = out;
+}
+
+function renderDays(){
+  const d = data.daily;
+  $("#days").innerHTML = d.time.map((t,i)=>{
+    const [ico] = wx(d.weather_code[i]);
+    const name = i===0 ? "Danas" : DANI[dayOf(t).getDay()];
+    const pp = d.precipitation_probability_max[i];
+    return `<div class="day"><div>${name}</div><div>${ico}</div>
+      <div class="p">${pp>=20?"💧 "+pp+"%":""}</div>
+      <div class="tt">${Math.round(d.temperature_2m_max[i])}° <span>${Math.round(d.temperature_2m_min[i])}°</span></div></div>`;
+  }).join("");
+}
+
+/* ---------- 👕 VEŠ ---------- */
+const MACHINE_H = 2;   // koliko traje pranje u mašini (h)
+
+function dryOk(h, i){
+  return h.precipitation_probability[i] < 35 && h.precipitation[i] < 0.1 && h.relative_humidity_2m[i] < 90;
+}
+// Procjena koliko sati treba da se veš osuši vani
+function dryingHours(h, from, to){
+  let rate = 0, n = 0;
+  for(let i=from;i<to;i++){
+    const t=h.temperature_2m[i], rh=h.relative_humidity_2m[i], w=h.wind_speed_10m[i], cc=h.cloud_cover[i];
+    let r = 1 + (t-15)*0.035 + Math.min(w,30)*0.02 - (rh-60)*0.015 + (cc<50?0.15:0);
+    rate += Math.max(r,0.25); n++;
+  }
+  rate = n ? rate/n : 0.5;
+  return Math.min(12, Math.max(2, Math.round(5/rate)));
+}
+
+function vesForDay(dayIdx){
+  const h = data.hourly, d = data.daily, s = nowIndex();
+  const date = d.time[dayIdx];
+  const sunset = hr(d.sunset[dayIdx]);
+  const startH = 7, endH = Math.max(startH+1, sunset - 1);   // vani samo po danu, ne pred mrak (rosa)
+  const idx = [];
+  h.time.forEach((t,i)=>{ if(t.startsWith(date) && hr(t)>=startH && hr(t)<endH && i>=s) idx.push(i); });
+  if(!idx.length) return null;
+
+  // najduži suhi prozor
+  let best = null, run = null;
+  for(const i of idx){
+    if(dryOk(h,i)){ run = run ? {...run, e:i} : {b:i, e:i}; }
+    else { if(run && (!best || run.e-run.b > best.e-best.b)) best = run; run = null; }
+  }
+  if(run && (!best || run.e-run.b > best.e-best.b)) best = run;
+
+  const firstRain = idx.find(i => !dryOk(h,i) && h.precipitation_probability[i] >= 35);
+  return {best, firstRain, idx, date};
+}
+
+function nextGoodDay(fromIdx){
+  const d = data.daily;
+  for(let i=fromIdx;i<d.time.length;i++){
+    if(d.precipitation_probability_max[i] < 30 && d.precipitation_sum[i] < 0.5) return i;
+  }
+  return -1;
+}
+
+function renderVes(){
+  const h = data.hourly;
+  const nowH = hr(data.current.time);
+  // poslije 14h gledamo sutra
+  const dayIdx = nowH >= 14 ? 1 : 0;
+  const dayLabel = dayIdx===0 ? "Danas" : "Sutra";
+  const r = vesForDay(dayIdx);
+  let cls="bad", big, sub="";
+
+  if(r && r.best){
+    const len = r.best.e - r.best.b + 1;
+    const need = dryingHours(h, r.best.b, r.best.e+1);
+    const hangFrom = hr(h.time[r.best.b]);
+    const dryUntil = hr(h.time[r.best.e]) + 1;
+    if(len >= need){
+      const latestMachine = dryUntil - need - MACHINE_H;
+      cls = "ok";
+      big = latestMachine <= nowH && dayIdx===0
+        ? `${dayLabel} je dobro za veš, pali mašinu odmah.`
+        : `${dayLabel} je dobro za veš. Pali mašinu najkasnije do ${latestMachine}h.`;
+      sub = `Vani od ${hangFrom}h, suho do ${dryUntil}h. Osušit će se za oko ${need}h.`;
+      if(r.firstRain !== undefined && r.firstRain > r.best.e) sub += ` ☔ Kiša oko ${hr(h.time[r.firstRain])}h, skloni prije.`;
+    } else {
+      cls = "warn";
+      big = `${dayLabel} je kratak suhi prozor (${hangFrom}–${dryUntil}h).`;
+      sub = `Veš treba oko ${need}h, neće se stići osušiti vani. Bolje unutra ili sušilica.`;
+    }
+  } else {
+    big = `${dayLabel} nemoj vani.`;
+    sub = r && r.firstRain !== undefined ? `Kiša ili velika vlaga, prva kiša oko ${hr(h.time[r.firstRain])}h.` : `Kiša ili velika vlaga.`;
+  }
+
+  if(cls !== "ok"){
+    const g = nextGoodDay(dayIdx+1);
+    if(g > 0) sub += ` 👉 Bolji dan: <b>${g===1?"sutra":DANI_PUNO[dayOf(data.daily.time[g]).getDay()]}</b>.`;
+    else sub += " Narednih dana nema baš suhog dana.";
+  }
+
+  $("#p-ves").innerHTML = `<h2>Veš · ${current.name}</h2>
+    <div class="verdict ${cls}"><div class="big">${big}</div><div class="sub">${sub}</div></div>`;
+}
+
+/* ---------- 🚗 PADA LI U…? ---------- */
+async function rainIn(city){
+  $("#putOut").innerHTML = '<span class="muted">Provjeravam…</span>';
+  try{
+    const f = await getForecast(city.lat, city.lon);
+    const h = f.hourly, key = f.current.time.slice(0,13);
+    let s = h.time.findIndex(t=>t.slice(0,13)===key); if(s<0) s=0;
+    const [ico, txt] = wx(f.current.weather_code, f.current.is_day);
+    const rainingNow = f.current.precipitation > 0 || [51,53,55,61,63,65,80,81,82,95,96,99].includes(f.current.weather_code);
+    let firstRain = -1, lastRain = -1;
+    for(let i=s;i<Math.min(s+12,h.time.length);i++){
+      if(h.precipitation_probability[i]>=40 || h.precipitation[i]>=0.2){ if(firstRain<0) firstRain=i; lastRain=i; }
+    }
+    let cls, big, sub;
+    if(rainingNow){ cls="bad"; big=`U ${city.name} trenutno pada. ${ico}`; sub = lastRain>s ? `Kiša moguća do oko ${hr(h.time[lastRain])+1}h.` : "Trebalo bi uskoro stati."; }
+    else if(firstRain>=0){ cls="warn"; big=`U ${city.name} sad ne pada, ali kiša stiže oko ${hr(h.time[firstRain])}h.`; sub="Ponesi kišobran."; }
+    else { cls="ok"; big=`U ${city.name} je suho narednih 12h. ${ico}`; sub=`${txt}, ${Math.round(f.current.temperature_2m)}°.`; }
+    sub += ` Vjetar ${Math.round(f.current.wind_speed_10m)} km/h, udari do ${Math.round(f.current.wind_gusts_10m)} km/h.`;
+    $("#putOut").innerHTML = `<div class="verdict ${cls}"><div class="big">${big}</div><div class="sub">${sub}</div></div>`;
+  }catch(e){ $("#putOut").innerHTML = `<div class="err">Ne mogu dohvatiti prognozu za ${city.name}.</div>`; }
+}
+$("#cityChips").innerHTML = CITIES.map((c,i)=>`<button class="chip" data-i="${i}">${c.name}</button>`).join("");
+$("#cityChips").addEventListener("click", e=>{
+  const b = e.target.closest(".chip"); if(!b) return;
+  document.querySelectorAll("#cityChips .chip").forEach(x=>x.classList.toggle("active", x===b));
+  rainIn(CITIES[+b.dataset.i]);
+});
+
+/* ---------- Meteoalarm ---------- */
+async function loadAlarms(){
+  const el = $("#alarm");
+  try{
+    const r = await fetch(METEOALARM_FEED);
+    if(!r.ok) throw 0;
+    const xml = new DOMParser().parseFromString(await r.text(), "application/xml");
+    const now = new Date();
+    const entries = [...xml.getElementsByTagName("entry")].map(e=>{
+      const g = tag => (e.getElementsByTagNameNS("*", tag)[0]||{}).textContent || "";
+      return { area:g("areaDesc"), sev:g("severity"), event:g("event"), exp:new Date(g("expires")), title:(e.getElementsByTagName("title")[0]||{}).textContent||"" };
+    }).filter(a => !isNaN(a.exp) ? a.exp > now : true);
+    const rank = {Extreme:3, Severe:2, Moderate:1, Minor:0};
+    const act = entries.filter(a => (rank[a.sev]??0) >= 1);
+    if(!act.length) return;
+    act.sort((a,b)=>(rank[b.sev]??0)-(rank[a.sev]??0));
+    const top = act[0];
+    const lvl = {Extreme:["Crveno","var(--bad)"], Severe:["Narandžasto","var(--orange)"], Moderate:["Žuto","var(--warn)"]}[top.sev];
+    el.style.background = lvl[1]; el.style.color = "#111";
+    el.innerHTML = `<b>⚠️ ${lvl[0]} upozorenje · ${top.event || "Meteoalarm"}</b>
+      ${[...new Set(act.map(a=>a.area))].slice(0,4).join(", ")}${act.length>4?"…":""}
+      · <a href="https://meteoalarm.org/en/live/region/BA" target="_blank" rel="noopener">detalji</a>`;
+    el.classList.add("show");
+  }catch(e){
+    // Feed vjerovatno blokira direktan poziv iz browsera (CORS) -> u fazi 2 ide preko našeg proxyja.
+    console.info("Meteoalarm nedostupan direktno iz browsera:", e);
+  }
+}
+
+/* ---------- Kontrole ---------- */
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  const open = !t.classList.contains("active");
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x=>x.classList.remove("open"));
+  if(open){ t.classList.add("active"); $("#p-"+t.dataset.p).classList.add("open"); }
+}));
+
+$("#searchBtn").onclick = ()=>{ $("#search").classList.toggle("open"); $("#q").focus(); };
+let qTimer;
+$("#q").addEventListener("input", e=>{
+  clearTimeout(qTimer);
+  const q = e.target.value.trim();
+  if(q.length < 2){ $("#results").innerHTML=""; return; }
+  qTimer = setTimeout(async ()=>{
+    const res = await geocode(q).catch(()=>[]);
+    $("#results").innerHTML = res.map((r,i)=>`<button data-i="${i}">${r.name} <small>${[r.admin1,r.country].filter(Boolean).join(", ")}</small></button>`).join("")
+      || '<div class="muted" style="padding:8px">Nema rezultata.</div>';
+    $("#results").onclick = ev=>{
+      const b = ev.target.closest("button"); if(!b) return;
+      const r = res[+b.dataset.i];
+      $("#search").classList.remove("open"); $("#q").value=""; $("#results").innerHTML="";
+      load({name:r.name, lat:r.latitude, lon:r.longitude});
+    };
+  }, 300);
+});
+
+function useGps(){
+  if(!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(async p=>{
+    const {latitude:lat, longitude:lon} = p.coords;
+    load({name:"Moja lokacija", lat, lon});
+  }, ()=>{}, {timeout:8000});
+}
+$("#gpsBtn").onclick = useGps;
+
+/* ---------- Start ---------- */
+let saved = null;
+try{ saved = JSON.parse(localStorage.getItem("loc")); }catch(e){}
+load(saved || DEFAULT_LOC);
+loadAlarms();
+</script>
+</body>
+</html>
