@@ -20,8 +20,8 @@ export default defineConfig(({ mode }) => {
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'ikona.svg', 'apple-touch-icon-180x180.png'],
         manifest: {
-          name: 'Prognoza',
-          short_name: 'Prognoza',
+          name: 'Hava',
+          short_name: 'Hava',
           description: 'Prognoza za BiH koja odgovara na pitanje: mogu li ovo danas?',
           lang: 'bs',
           start_url: baza,

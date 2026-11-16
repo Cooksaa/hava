@@ -16,7 +16,7 @@
     {
       "name": "pregled-pages",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "preview", "--base", "/prognoza/"],
+      "runtimeArgs": ["vite", "preview", "--base", "/hava/"],
       "port": 4173,
       "url": "http://localhost:4173"
     }
