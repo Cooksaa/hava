@@ -10,6 +10,7 @@ import { prikaziDane } from './dani';
 import { html, type Sirovo } from './html';
 import { ikonaUi } from './ikone';
 import { stvoriList } from './list';
+import { pokaziNovosti } from './novosti';
 import { postaviNebo } from './pozadina';
 import { povuciZaOsvjezi } from './povuci';
 import { stvoriPretragu } from './pretraga';
@@ -127,6 +128,7 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
           ${ikonaUi('lupa')}
         </button>
       </header>
+      <div data-dio="novo"></div>
       <main>
         <div data-dio="prognoza"></div>
         <div class="podloga aktivnosti">
@@ -157,6 +159,7 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
   const putujemEl = dio('putujem');
 
   const list = stvoriList();
+  pokaziNovosti(dio('novo'), list);
   const pretraga = stvoriPretragu((m) => {
     window.scrollTo({ top: 0 });
     void skladiste.ucitaj(m);

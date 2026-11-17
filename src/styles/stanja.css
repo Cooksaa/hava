@@ -181,3 +181,66 @@ html {
     transform: rotate(360deg);
   }
 }
+
+/* Poslije ažuriranja, ispod imena mjesta (ui/novosti.ts). */
+.novo {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 10px;
+  border-radius: var(--r-pilula);
+  background: rgb(var(--staklo-rgb) / var(--staklo-a));
+  font-size: 0.875rem;
+}
+
+.novo__otvori {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 4px 0 16px;
+  border-radius: var(--r-pilula) 0 0 var(--r-pilula);
+}
+
+.novo__akcija {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.novo__zatvori {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 0 var(--r-pilula) var(--r-pilula) 0;
+  font-size: 16px;
+  opacity: 0.8;
+}
+
+.novo__otvori:active,
+.novo__zatvori:active {
+  background: rgb(255 255 255 / 0.14);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .novo {
+    animation: ulaz 320ms var(--izlaz) 400ms both;
+  }
+}
+
+.novosti {
+  margin: 8px 0 0;
+  padding-left: 1.1em;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.novosti li + li {
+  margin-top: 8px;
+}
+
+.list__sadrzaj > .list__podnaslov:first-child {
+  margin-top: 8px;
+}
