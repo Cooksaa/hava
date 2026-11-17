@@ -26,7 +26,7 @@ void skladiste.ucitajGradove();
 
 // Web build ovo izbaci u cijelosti (MODE je poznat pri buildu).
 if (import.meta.env.MODE === 'android') {
-  void import('./android').then((m) => m.pokreniAndroid());
+  void import('./android').then((m) => m.pokreniAndroid(app));
 }
 
 /*

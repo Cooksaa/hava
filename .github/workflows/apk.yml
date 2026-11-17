@@ -1,7 +1,8 @@
 # Android APK.
 #
-# - Oznaka v1.2.3 (git tag): potpisan APK ide na GitHub Releases kao nova verzija.
-#   Aplikacija na mobitelu to vidi i pokaže "Nova verzija".
+# - Oznaka v1.2.3 (git tag): potpisan APK i web paket idu na GitHub Releases.
+#   Aplikacija na mobitelu sama skine web paket i uključi ga sljedeći put.
+#   Samo kad treba novi APK (hava.minApk), pokaže "Nova verzija · Preuzmi".
 # - Push na main koji dira Android ili kod: probni APK, samo kao prilog ovom pokretanju,
 #   da se odmah vidi ako se build pokvario. Ne objavljuje se.
 #
@@ -39,6 +40,9 @@ jobs:
       JE_IZDANJE: ${{ startsWith(github.ref, 'refs/tags/v') }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Sve oznake: provjera nativnog dijela poredi s izdanjem hava.minApk.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v7
         with:
@@ -74,6 +78,33 @@ jobs:
           echo "HAVA_VERSION_CODE=$((A * 10000 + B * 100 + C))" >> "$GITHUB_ENV"
           echo "HAVA_VERSION_NAME=$VERZIJA" >> "$GITHUB_ENV"
           echo "VERZIJA=$VERZIJA" >> "$GITHUB_ENV"
+
+      # Web paket iz izdanja aplikacija sama skine (src/android.ts), ali samo na APK-u
+      # od verzije hava.minApk naviše. Ako se Android dio promijenio od tog izdanja,
+      # paket bi radio na APK-u koji to nema: zato izdanje ovdje pada.
+      - name: Nativni dio
+        if: env.JE_IZDANJE == 'true'
+        run: |
+          MIN="$(node -p "require('./package.json').hava.minApk")"
+          echo "MIN_APK=$MIN" >> "$GITHUB_ENV"
+          if [ "$MIN" = "$VERZIJA" ]; then
+            exit 0
+          fi
+          if ! git rev-parse -q --verify "refs/tags/v$MIN" > /dev/null; then
+            echo "::error::Nema oznake v$MIN iz hava.minApk u package.json."
+            exit 1
+          fi
+          POTREBNO="Treba novi APK: postavi hava.minApk u package.json na $VERZIJA."
+          if ! git diff --quiet "v$MIN" HEAD -- android capacitor.config.ts; then
+            echo "::error::Android dio se promijenio od v$MIN. $POTREBNO"
+            exit 1
+          fi
+          STARI="$(git show "v$MIN:package.json" | node scripts/nativni-dio.cjs)"
+          NOVI="$(git show "HEAD:package.json" | node scripts/nativni-dio.cjs)"
+          if [ "$STARI" != "$NOVI" ]; then
+            echo "::error::Capacitor dodaci su se promijenili od v$MIN. $POTREBNO"
+            exit 1
+          fi
 
       - run: npm run android
 
@@ -130,11 +161,20 @@ jobs:
           path: ${{ runner.temp }}/Hava-*.apk
           retention-days: 14
 
+      - name: Web paket
+        if: env.JE_IZDANJE == 'true'
+        run: |
+          # dist je build za Android (npm run android), iste verzije kao oznaka.
+          PAKET="$RUNNER_TEMP/Hava-web-$VERZIJA-apk-$MIN_APK.zip"
+          (cd dist && zip -qr -X "$PAKET" .)
+          unzip -l "$PAKET" | grep -q ' index.html$' || { echo "::error::Paket nema index.html."; exit 1; }
+          echo "WEB_PAKET=$PAKET" >> "$GITHUB_ENV"
+
       - name: GitHub izdanje
         if: env.JE_IZDANJE == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP/Hava-$VERZIJA.apk" \
+          gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP/Hava-$VERZIJA.apk" "$WEB_PAKET" \
             --title "Hava $VERZIJA" \
             --notes "Android aplikacija. Preuzmi Hava-$VERZIJA.apk na mobitelu i otvori ga. Ako Android pita, dozvoli instalaciju iz ovog izvora. Web verzija: https://cooksaa.github.io/hava/"

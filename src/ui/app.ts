@@ -1,7 +1,6 @@
 import { GRADOVI } from '../config';
 import { stanjeNeba } from '../logic/nebo';
 import { uskladiSaSatom } from '../logic/svjeze';
-import { provjeriNovuVerziju } from '../api/azuriranje';
 import type { Skladiste, Stanje } from '../state';
 import { greskaRecenica, osvjezenoRecenica } from '../tekst';
 import type { Prognoza } from '../tipovi';
@@ -73,7 +72,12 @@ function prognoza(s: Stanje): Sirovo {
 /** Pokrenuto kao Android aplikacija (build s "--mode android"), ne kao web stranica. */
 const APLIKACIJA = import.meta.env.MODE === 'android';
 
-export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): { osvjeziPrikaz(): void } {
+export interface Aplikacija {
+  osvjeziPrikaz(): void;
+  pokaziNovuVerziju(verzija: string, link: string): void;
+}
+
+export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikacija {
   korijen.innerHTML = html`
     <div class="nebo" aria-hidden="true"></div>
     <div class="ekran">
@@ -189,24 +193,20 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): { osvjez
   skladiste.prati(iscrtaj);
   iscrtaj(skladiste.daj());
 
-  // Samo u Android aplikaciji s GitHuba: tiha linija kad stigne nova verzija. Bez pop-upa.
-  if (APLIKACIJA) {
-    void provjeriNovuVerziju(__VERSIJA__).then((nova) => {
-      if (!nova) return;
-      dio('azuriranje').innerHTML = html`
-        <a class="podloga azuriranje" href="${nova.link}">
-          <span>Nova verzija ${nova.verzija}</span>
-          <span class="azuriranje__akcija">Preuzmi</span>
-        </a>
-      `.html;
-    });
-  }
-
   return {
     // Bez promjene stanja: samo ponovo izračunaj "sad" (app otvoren, a nema mreže).
     osvjeziPrikaz() {
       prije = null;
       iscrtaj(skladiste.daj());
+    },
+    // Android, kad treba novi APK: tiha linija na dnu. Bez pop-upa.
+    pokaziNovuVerziju(verzija: string, link: string) {
+      dio('azuriranje').innerHTML = html`
+        <a class="podloga azuriranje" href="${link}">
+          <span>Nova verzija ${verzija}</span>
+          <span class="azuriranje__akcija">Preuzmi</span>
+        </a>
+      `.html;
     },
   };
 }

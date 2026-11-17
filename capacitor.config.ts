@@ -24,6 +24,15 @@ const config: CapacitorConfig = {
       // Gornji dio neba je uvijek taman, pa su ikone statusne trake svijetle.
       style: 'DARK',
     },
+    // Ažuriranje web dijela bez novog APK-a (src/android.ts). Sami biramo kad i šta:
+    // paket dolazi s GitHub izdanja. Prazne adrese = nikakvi upiti ni statistika
+    // prema Capgo serverima.
+    CapacitorUpdater: {
+      autoUpdate: 'off',
+      updateUrl: '',
+      statsUrl: '',
+      channelUrl: '',
+    },
   },
 };
 
