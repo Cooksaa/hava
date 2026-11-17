@@ -14,7 +14,20 @@ export function narednaDvadesetCetiri(p: Prognoza): Sat[] {
     0,
     p.sati.findIndex((s) => s.vrijeme.slice(0, 13) === kljuc),
   );
-  return p.sati.slice(od, od + 24);
+  const sati = p.sati.slice(od, od + 24);
+  const prvi = sati[0];
+  if (!prvi) return sati;
+  // "Sad" mora reći isto što i veliki broj gore: trenutno mjerenje, ne prognozu za taj sat.
+  // Ako baš sad pada, vjerovatnoća za ovaj sat nema smisla, pada.
+  const { sada } = p;
+  sati[0] = {
+    ...prvi,
+    temp: sada.temp,
+    kod: sada.kod,
+    dan: sada.dan,
+    kisaVjer: sada.kisaMm > 0 ? 100 : prvi.kisaVjer,
+  };
+  return sati;
 }
 
 /** Sama lista. Prvi sat je "Sad", ponoć nosi ime dana. */

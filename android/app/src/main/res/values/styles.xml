@@ -13,10 +13,17 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- Iza aplikacije (dok se stranica crta, ili oko nje na starim WebView-ima): noćno nebo, ne bijelo. -->
+        <item name="android:windowBackground">@color/hava_noc</item>
     </style>
 
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <!-- Početni ekran nikad nema traku s naslovom. -->
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <!-- Android 12+ crta svoj početni ekran: tamna pozadina, ne bijela. -->
+        <item name="windowSplashScreenBackground">@color/hava_noc</item>
     </style>
 </resources>
