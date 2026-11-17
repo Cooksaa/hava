@@ -67,3 +67,18 @@
     ),
     linear-gradient(180deg, var(--nebo-1) 0%, var(--nebo-2) 55%, var(--nebo-3) 100%);
 }
+
+/*
+ * Ispod statusne trake (sat, baterija) sadržaj ne smije prolaziti kao da je nema:
+ * traka nebeske boje, koja se pri dnu pretapa. Gdje nema sigurne zone (obični
+ * preglednik), visina je 0 i ovoga nema.
+ */
+#app::after {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto;
+  height: calc(env(safe-area-inset-top) * 1.4);
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(180deg, var(--nebo-1) 70%, transparent);
+}
