@@ -108,10 +108,18 @@ jobs:
 
       - name: Provjera potpisa
         run: |
-          APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
+          APKSIGNER="$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          if [ -z "$APKSIGNER" ]; then
+            echo "::error::Nema apksignera u Android SDK-u."
+            exit 1
+          fi
           for f in "$RUNNER_TEMP"/Hava-*.apk; do
-            echo "$f"
-            "$APKSIGNER" verify --print-certs "$f" | grep -E "Signer #1 certificate (DN|SHA-256)"
+            IZLAZ="$("$APKSIGNER" verify --print-certs "$f" 2>&1)" || {
+              echo "::error::Potpis nije ispravan: $(echo "$IZLAZ" | tr '\n' ' ' | cut -c1-400)"
+              exit 1
+            }
+            # Otisak ključa kao napomena: mora biti isti kao u Hava-kljuc/PROCITAJ.txt.
+            echo "::notice title=$(basename "$f")::$(echo "$IZLAZ" | grep -E 'certificate (DN|SHA-256)' | tr '\n' ' ')"
           done
 
       - name: Prilog (probni build)
