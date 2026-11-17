@@ -24,6 +24,11 @@ const app = pokreniApp(korijen, skladiste);
 void skladiste.ucitaj(mjesto);
 void skladiste.ucitajGradove();
 
+// Web build ovo izbaci u cijelosti (MODE je poznat pri buildu).
+if (import.meta.env.MODE === 'android') {
+  void import('./android').then((m) => m.pokreniAndroid());
+}
+
 /*
  * Osvježavanje. App na mobitelu često ostane otvoren satima, pa:
  *  - kad se vrati u prvi plan, povuci novu prognozu ako je stara starija od 10 minuta
