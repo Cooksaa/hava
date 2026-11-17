@@ -1,6 +1,7 @@
 import { GRADOVI } from '../config';
 import { stanjeNeba } from '../logic/nebo';
 import { uskladiSaSatom } from '../logic/svjeze';
+import { provjeriNovuVerziju } from '../api/azuriranje';
 import type { Skladiste, Stanje } from '../state';
 import { greskaRecenica, osvjezenoRecenica } from '../tekst';
 import type { Prognoza } from '../tipovi';
@@ -69,6 +70,9 @@ function prognoza(s: Stanje): Sirovo {
   `;
 }
 
+/** Pokrenuto kao Android aplikacija (build s "--mode android"), ne kao web stranica. */
+const APLIKACIJA = import.meta.env.MODE === 'android';
+
 export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): { osvjeziPrikaz(): void } {
   korijen.innerHTML = html`
     <div class="nebo" aria-hidden="true"></div>
@@ -92,9 +96,13 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): { osvjez
           ${prikaziDron()}
         </div>
       </main>
+      <div data-dio="azuriranje"></div>
       <footer class="izvor">
-        Podaci:
-        <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
+        ${APLIKACIJA ? html`<span class="izvor__verzija">Hava ${__VERSIJA__}</span>` : ''}
+        <span>
+          Podaci:
+          <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
+        </span>
       </footer>
     </div>
   `.html;
@@ -180,6 +188,19 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): { osvjez
 
   skladiste.prati(iscrtaj);
   iscrtaj(skladiste.daj());
+
+  // Samo u Android aplikaciji s GitHuba: tiha linija kad stigne nova verzija. Bez pop-upa.
+  if (APLIKACIJA) {
+    void provjeriNovuVerziju(__VERSIJA__).then((nova) => {
+      if (!nova) return;
+      dio('azuriranje').innerHTML = html`
+        <a class="podloga azuriranje" href="${nova.link}">
+          <span>Nova verzija ${nova.verzija}</span>
+          <span class="azuriranje__akcija">Preuzmi</span>
+        </a>
+      `.html;
+    });
+  }
 
   return {
     // Bez promjene stanja: samo ponovo izračunaj "sad" (app otvoren, a nema mreže).

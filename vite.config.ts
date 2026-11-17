@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
@@ -10,11 +11,22 @@ export default defineConfig(({ mode }) => {
   const putanja = loadEnv(mode, '.', '').BASE || '/';
   const baza = putanja.endsWith('/') ? putanja : `${putanja}/`;
 
+  /*
+   * "vite build --mode android": isti kod, ali za aplikaciju. Bez service workera:
+   * u aplikaciji su fajlovi već na mobitelu, a stari keš bi samo smetao novoj verziji.
+   */
+  const android = mode === 'android';
+  const { version } = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string };
+
   return {
     base: baza,
+    define: {
+      __VERSIJA__: JSON.stringify(version),
+    },
     server: { port: 5173, strictPort: true },
     preview: { port: 4173, strictPort: true },
     plugins: [
+      !android &&
       VitePWA({
         // Nova verzija se preuzme u pozadini i važi od sljedećeg otvaranja. Bez pitanja i pop-upova.
         registerType: 'autoUpdate',

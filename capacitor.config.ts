@@ -1,0 +1,30 @@
+import type { CapacitorConfig } from '@capacitor/cli';
+
+/*
+ * Android (kasnije i iOS) aplikacija. Isti kod kao web verzija, zapakovan u
+ * pravu aplikaciju. Gradi se sa `npm run android`, a APK pravi GitHub
+ * (.github/workflows/apk.yml).
+ */
+const config: CapacitorConfig = {
+  // Trajni ID. Kad app ode na Play Store, ovo se više nikad ne mijenja.
+  appId: 'io.github.cooksaa.hava',
+  appName: 'Hava',
+  webDir: 'dist',
+  android: {
+    // Boja iza aplikacije dok se učitava: noćno nebo, kao na webu.
+    backgroundColor: '#0a1322',
+  },
+  plugins: {
+    SystemBars: {
+      // Ubacuje prave vrijednosti sigurnih zona (izrez za kameru, traka za navigaciju),
+      // i na starijim Android WebView verzijama gdje env(safe-area-inset-*) ne radi.
+      insetsHandling: 'css',
+      // index.html ima viewport-fit=cover: app ide do rubova ekrana.
+      initialViewportFitValueHint: 'cover',
+      // Gornji dio neba je uvijek taman, pa su ikone statusne trake svijetle.
+      style: 'DARK',
+    },
+  },
+};
+
+export default config;

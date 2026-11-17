@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Ikona za starije Androide (bez slojeva): isto kao public/ikona.svg. -->
+  <defs>
+    <linearGradient id="nebo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1f5aa6"/>
+      <stop offset="0.6" stop-color="#3774bd"/>
+      <stop offset="1" stop-color="#5a95d6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#nebo)"/>
+  <circle cx="512" cy="408" r="156" fill="#fff"/>
+  <rect x="224" y="660" width="104" height="52" rx="16" fill="#fff" fill-opacity="0.45"/>
+  <rect x="344" y="660" width="104" height="52" rx="16" fill="#35b58a"/>
+  <rect x="464" y="660" width="104" height="52" rx="16" fill="#35b58a"/>
+  <rect x="584" y="660" width="104" height="52" rx="16" fill="#35b58a"/>
+  <rect x="704" y="660" width="104" height="52" rx="16" fill="#fff" fill-opacity="0.45"/>
+</svg>

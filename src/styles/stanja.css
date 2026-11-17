@@ -61,3 +61,28 @@
   line-height: 1.25;
   font-weight: 600;
 }
+
+/* --- Nova verzija (samo Android aplikacija s GitHuba) --- */
+
+.azuriranje {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  margin-top: 14px;
+  padding: 0 20px;
+  border-radius: var(--r-pilula);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.azuriranje__akcija {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.azuriranje:active {
+  background: rgb(255 255 255 / 0.2);
+}

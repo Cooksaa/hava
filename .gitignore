@@ -4,3 +4,9 @@ dev-dist
 *.local
 .DS_Store
 Thumbs.db
+
+# Ključ za potpisivanje Android aplikacije: nikad u repo.
+*.p12
+*.jks
+*.keystore
+*.pfx

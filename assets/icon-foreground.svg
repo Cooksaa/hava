@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!--
+    Prednji sloj Android ikone. Android ga reže u krug, kvadrat ili kapljicu,
+    pa je sve bitno u sredini (sigurna zona je 66% ikone).
+  -->
+  <g transform="translate(512 512) scale(0.86) translate(-512 -512)">
+    <circle cx="512" cy="408" r="156" fill="#fff"/>
+    <rect x="224" y="660" width="104" height="52" rx="16" fill="#fff" fill-opacity="0.45"/>
+    <rect x="344" y="660" width="104" height="52" rx="16" fill="#35b58a"/>
+    <rect x="464" y="660" width="104" height="52" rx="16" fill="#35b58a"/>
+    <rect x="584" y="660" width="104" height="52" rx="16" fill="#35b58a"/>
+    <rect x="704" y="660" width="104" height="52" rx="16" fill="#fff" fill-opacity="0.45"/>
+  </g>
+</svg>
