@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { procijeniKisu } from '../logic/kisa';
 import { procijeniVes } from '../logic/ves';
-import { uPrognozu, type OmOdgovor } from './openMeteo';
+import { spojiModele, uPrognozu, type OmOdgovor, type OmSirovo } from './openMeteo';
 
 /** Skraćen stvarni odgovor: dva dana, s jednom rupom (null) u podacima. */
 function odgovor(): OmOdgovor {
@@ -76,5 +76,60 @@ describe('Open-Meteo → Prognoza', () => {
   it('logika radi nad pretvorenim odgovorom', () => {
     expect(procijeniVes(p)).toMatchObject({ nivo: 'nemoj', kod: 'vlaga', dan: 'sutra' });
     expect(procijeniKisu(p).kod).toBe('suho');
+  });
+});
+
+describe('spajanje modela (ICON-2I + best_match)', () => {
+  const I = 'italia_meteo_arpae_icon_2i';
+  const B = 'best_match';
+  const sati = ['2026-11-18T10:00', '2026-11-18T11:00', '2026-11-18T12:00', '2026-11-19T00:00'];
+  const satne = (glavni: (number | null)[], rezerva: number[]) => ({ [`temperature_2m_${I}`]: glavni, [`temperature_2m_${B}`]: rezerva });
+
+  function sirovo(dodatno: Partial<OmSirovo> = {}): OmSirovo {
+    return {
+      utc_offset_seconds: 3600,
+      current: { time: '2026-11-18T10:15', temperature_2m: 15, relative_humidity_2m: 70, apparent_temperature: 14, precipitation: 0, weather_code: 3, is_day: 1, wind_speed_10m: 10, wind_gusts_10m: 20 },
+      hourly: {
+        time: sati,
+        ...satne([15, 16, 14.5, null], [12, 13, 14, 9]),
+        [`precipitation_${I}`]: [0, 0.4, 0, null],
+        [`precipitation_${B}`]: [0.5, 0, 0.3, 0],
+        [`precipitation_probability_${I}`]: [null, null, null, null],
+        [`precipitation_probability_${B}`]: [100, 10, 80, 20],
+      },
+      daily: {
+        time: ['2026-11-18', '2026-11-19'],
+        [`precipitation_sum_${I}`]: [0.4, null],
+        [`precipitation_sum_${B}`]: [0.8, 0],
+        [`precipitation_probability_max_${B}`]: [100, 20],
+      },
+      ...dodatno,
+    };
+  }
+
+  it('ICON-2I gdje ga ima, dalje best_match', () => {
+    expect(spojiModele(sirovo()).hourly.temperature_2m).toEqual([15, 16, 14.5, 9]);
+    expect(spojiModele(sirovo()).hourly.precipitation).toEqual([0, 0.4, 0, 0]);
+  });
+
+  it('vjerovatnoću kiše odlučuje ICON-2I', () => {
+    // suh po ICON-2I iako ansambl kaže 100% ili 80% → 30; mokar a ansambl 10% → 60; dalje ansambl
+    expect(spojiModele(sirovo()).hourly.precipitation_probability).toEqual([30, 60, 30, 20]);
+  });
+
+  it('dnevni maksimum iz satnih za dane koje ICON-2I pokriva', () => {
+    expect(spojiModele(sirovo()).daily.precipitation_probability_max).toEqual([60, 20]);
+  });
+
+  it('van mape ICON-2I stižu kolone bez nastavka i prolaze kako jesu', () => {
+    const o = spojiModele(
+      sirovo({
+        hourly: { time: sati, temperature_2m: [1, 2, 3, 4], precipitation_probability: [5, 6, 7, 8] },
+        daily: { time: ['2026-11-18'], precipitation_probability_max: [7] },
+      }),
+    );
+    expect(o.hourly.temperature_2m).toEqual([1, 2, 3, 4]);
+    expect(o.hourly.precipitation_probability).toEqual([5, 6, 7, 8]);
+    expect(o.daily.precipitation_probability_max).toEqual([7]);
   });
 });

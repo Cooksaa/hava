@@ -57,6 +57,10 @@ export interface Prognoza {
   sada: Sada;
   sati: Sat[];
   dani: Dan[];
+  /** Nadmorska visina mjesta (m), za poređenje sa stanicom. Starije spremljene prognoze je nemaju. */
+  visina?: number;
+  /** "Sada" je ispravljeno mjerenjem sa stanice (logic/mjerenje.ts). */
+  izmjereno?: { gdje: string; kad: string };
 }
 
 export interface Mjesto {

@@ -68,6 +68,14 @@
     linear-gradient(180deg, var(--nebo-1) 0%, var(--nebo-2) 55%, var(--nebo-3) 100%);
 }
 
+/* Kiša, snijeg, oblaci, zvijezde (ui/atmosfera.ts). */
+.atmosfera {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
 /*
  * Ispod statusne trake (sat, baterija) sadržaj ne smije prolaziti kao da je nema:
  * traka nebeske boje, koja se pri dnu pretapa. Gdje nema sigurne zone (obični

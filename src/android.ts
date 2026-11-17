@@ -1,7 +1,9 @@
 import { App } from '@capacitor/app';
+import { CapacitorHttp } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { zadnjeIzdanje } from './api/azuriranje';
 import { odlukaAzuriranja } from './logic/azuriranje';
+import { AERODROMI, zadnjaMjerenja, type MetarZapis } from './logic/mjerenje';
 import type { Aplikacija } from './ui/app';
 
 /*
@@ -28,7 +30,37 @@ export function pokreniAndroid(app: Aplikacija): void {
   });
 
   void azuriraj(app);
-  void App.addListener('resume', () => void azuriraj(app));
+  void izmjeri(app);
+  void App.addListener('resume', () => {
+    void azuriraj(app);
+    void izmjeri(app);
+  });
+  setInterval(() => {
+    if (document.visibilityState === 'visible') void izmjeri(app);
+  }, MJERI_NAKON_MS);
+}
+
+/*
+ * Mjerenja s aerodroma (METAR, aviationweather.gov, javni podaci). Njihov server ne
+ * dozvoljava poziv iz preglednika (CORS), pa ovo ide samo kroz Androidov HTTP.
+ * Stanice šalju novo mjerenje svakih 30–60 minuta.
+ */
+const METAR = `https://aviationweather.gov/api/data/metar?ids=${Object.keys(AERODROMI).join(',')}&format=json&hours=2`;
+const MJERI_NAKON_MS = 10 * 60 * 1000;
+let izmjereno = 0;
+
+async function izmjeri(app: Aplikacija): Promise<void> {
+  if (Date.now() - izmjereno < MJERI_NAKON_MS) return;
+  try {
+    const odgovor = await CapacitorHttp.get({ url: METAR, connectTimeout: 10_000, readTimeout: 10_000 });
+    if (odgovor.status !== 200) return;
+    const podaci: unknown = typeof odgovor.data === 'string' ? JSON.parse(odgovor.data) : odgovor.data;
+    if (!Array.isArray(podaci)) return;
+    izmjereno = Date.now();
+    app.postaviMjerenja(zadnjaMjerenja(podaci as MetarZapis[]));
+  } catch {
+    // Bez mjerenja ostaje prognoza modela.
+  }
 }
 
 let radi = false;

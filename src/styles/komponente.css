@@ -71,6 +71,12 @@
   font-size: 0.9375rem;
 }
 
+.sada__izvor {
+  margin-top: 6px;
+  font-size: 0.8125rem;
+  color: var(--tekst-tihi);
+}
+
 /* --- Kartica --- */
 
 .kartica {

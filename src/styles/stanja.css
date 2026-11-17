@@ -86,3 +86,98 @@
 .azuriranje:active {
   background: rgb(255 255 255 / 0.2);
 }
+
+/*
+ * Prvi ulazak: kartice se pojave jedna za drugom, a traka za veš se napuni slijeva.
+ * Samo jednom, kad prognoza prvi put stigne (klasa "ulazi" na .ekran, ui/app.ts),
+ * ne pri svakom osvježavanju. Sa smanjenim kretanjem ničega od ovoga nema.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .ulazi :is(.sada, .ves, .prognoza, .aktivnosti) {
+    animation: ulaz 320ms var(--izlaz) both;
+  }
+
+  .ulazi .ves {
+    animation-delay: 50ms;
+  }
+
+  .ulazi .prognoza {
+    animation-delay: 100ms;
+  }
+
+  .ulazi .aktivnosti {
+    animation-delay: 150ms;
+  }
+
+  .ulazi .ves .traka__sati {
+    animation: napuni 520ms var(--izlaz) 180ms both;
+  }
+}
+
+@keyframes ulaz {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes napuni {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Povuci za osvježavanje (ui/povuci.ts). */
+html {
+  /* Bez Chromeovog osvježavanja cijele stranice i odskakanja: imamo svoje. */
+  overscroll-behavior-y: contain;
+}
+
+.povuci {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) - 44px);
+  left: 50%;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--staklo-cvrsto);
+  color: var(--tekst);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+  opacity: 0;
+  transform: translate(-50%, 0);
+  pointer-events: none;
+}
+
+.povuci svg {
+  width: 20px;
+  height: 20px;
+}
+
+.povuci--pusti {
+  transition:
+    transform 240ms var(--izlaz),
+    opacity 240ms var(--izlaz);
+}
+
+.povuci--vrti svg {
+  animation: vrti 800ms linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .povuci--vrti svg {
+    animation-duration: 1600ms;
+  }
+}
+
+@keyframes vrti {
+  to {
+    transform: rotate(360deg);
+  }
+}

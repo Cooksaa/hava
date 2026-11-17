@@ -15,6 +15,9 @@ export function prikaziSada(p: Prognoza): Sirovo {
       </div>
       <p class="sada__opis">${sadaRecenica(p.sada)}</p>
       ${danas ? html`<p class="sada__raspon broj">${rasponRecenica(danas)}</p>` : ''}
+      ${p.izmjereno
+        ? html`<p class="sada__izvor broj">Izmjereno: ${p.izmjereno.gdje}, ${p.izmjereno.kad}</p>`
+        : ''}
     </section>
   `;
 }
