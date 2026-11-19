@@ -4,6 +4,7 @@ import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { zadnjeIzdanje } from './api/azuriranje';
 import { odlukaAzuriranja } from './logic/azuriranje';
 import { AERODROMI, zadnjaMjerenja, type MetarZapis } from './logic/mjerenje';
+import type { MaZapis } from './logic/upozorenja';
 import type { Aplikacija } from './ui/app';
 
 /*
@@ -31,12 +32,16 @@ export function pokreniAndroid(app: Aplikacija): void {
 
   void azuriraj(app);
   void izmjeri(app);
+  void upozori(app);
   void App.addListener('resume', () => {
     void azuriraj(app);
     void izmjeri(app);
+    void upozori(app);
   });
   setInterval(() => {
-    if (document.visibilityState === 'visible') void izmjeri(app);
+    if (document.visibilityState !== 'visible') return;
+    void izmjeri(app);
+    void upozori(app);
   }, MJERI_NAKON_MS);
 }
 
@@ -60,6 +65,30 @@ async function izmjeri(app: Aplikacija): Promise<void> {
     app.postaviMjerenja(zadnjaMjerenja(podaci as MetarZapis[]));
   } catch {
     // Bez mjerenja ostaje prognoza modela.
+  }
+}
+
+/*
+ * Službena upozorenja FHMZ BiH i RHMZ RS (MeteoAlarm). Ni njihov server ne dozvoljava
+ * poziv iz preglednika, pa i ovo ide kroz Androidov HTTP. Zavodi ih izdaju par puta dnevno,
+ * a odgovor ima ~110 kB (nekomprimovan), pa ne češće od svakih pola sata.
+ */
+const UPOZORENJA = 'https://feeds.meteoalarm.org/api/v1/warnings/feeds-bosnia-herzegovina';
+const UPOZORI_NAKON_MS = 30 * 60 * 1000;
+let upozoreno = 0;
+
+async function upozori(app: Aplikacija): Promise<void> {
+  if (Date.now() - upozoreno < UPOZORI_NAKON_MS) return;
+  try {
+    const odgovor = await CapacitorHttp.get({ url: UPOZORENJA, connectTimeout: 10_000, readTimeout: 15_000 });
+    if (odgovor.status !== 200) return;
+    const podaci: unknown = typeof odgovor.data === 'string' ? JSON.parse(odgovor.data) : odgovor.data;
+    const lista = (podaci as { warnings?: unknown } | null)?.warnings;
+    if (!Array.isArray(lista)) return;
+    upozoreno = Date.now();
+    app.postaviUpozorenja(lista as MaZapis[]);
+  } catch {
+    // Bez mreže ostaju zadnja zapamćena upozorenja.
   }
 }
 

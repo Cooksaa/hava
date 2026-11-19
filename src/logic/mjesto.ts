@@ -1,4 +1,4 @@
-import { MJESTA, type PoznatoMjesto } from '../mjesta';
+import { BIH, MJESTA, type PoznatoMjesto } from '../mjesta';
 import type { Mjesto } from '../tipovi';
 
 /* Ime za GPS koordinate i pretraga po ugrađenoj listi mjesta. */
@@ -41,7 +41,9 @@ export function mjestoZaKoordinate(lat: number, lon: number): Mjesto {
       : najblize && najmanje <= BLIZU_KM
         ? `Blizu ${najblize.genitiv}`
         : 'Moja lokacija';
-  return { ime, ...tacka };
+  // Država najbližeg poznatog mjesta; na granici (Čapljina–Metković) dovoljno tačno.
+  const bih = najblize && najmanje <= BLIZU_KM ? { bih: najblize.drzava === BIH } : {};
+  return { ime, ...tacka, ...bih };
 }
 
 /** "Čapljina" → "capljina", da pretraga radi i bez kvačica. */

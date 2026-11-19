@@ -15,7 +15,7 @@ export interface PoznatoMjesto extends Mjesto {
   drzava: string;
 }
 
-const BIH = 'Bosna i Hercegovina';
+export const BIH = 'Bosna i Hercegovina';
 const HR = 'Hrvatska';
 
 export const MJESTA: PoznatoMjesto[] = [

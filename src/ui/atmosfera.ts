@@ -13,6 +13,7 @@ export interface Atmosfera {
   postavi(kod: number, noc: boolean): void;
 }
 
+/** a: indeks prozirnosti (0–2); kapi iste prozirnosti se crtaju jednim potezom. */
 interface Kap { x: number; y: number; duz: number; brz: number; a: number }
 interface Pahulja { x: number; y: number; r: number; brz: number; faza: number }
 interface Zvijezda { x: number; y: number; r: number; faza: number; brz: number }
@@ -54,6 +55,8 @@ const SLICICA_MS = 33;
 /** Ako je prosječna sličica sporija od ovoga, telefon ne stiže. */
 const SPORO_MS = 55;
 const NAGIB = 0.14;
+/** Tri nivoa prozirnosti kapi: dovoljno za dubinu, a samo tri poteza po sličici umjesto stotinu. */
+const KAP_ALFA = [0.18, 0.27, 0.36] as const;
 
 const slucajno = (od: number, do_: number): number => od + Math.random() * (do_ - od);
 
@@ -127,7 +130,7 @@ export function stvoriAtmosferu(roditelj: HTMLElement): Atmosfera {
     y: gore ? slucajno(-h * 0.3, 0) : Math.random() * h,
     duz: slucajno(12, 26) * s,
     brz: slucajno(700, 1000) * s,
-    a: slucajno(0.16, 0.38),
+    a: Math.floor(Math.random() * KAP_ALFA.length),
   });
 
   const novaPahulja = (gore: boolean): Pahulja => ({
@@ -180,9 +183,6 @@ export function stvoriAtmosferu(roditelj: HTMLElement): Atmosfera {
     if (!mirna) {
       // Kiša: nove kapi kreću odozgo dok se ne dostigne cilj; višak samo dopadne.
       if (kapi.length < cilj.kapi) kapi.push(...Array.from({ length: Math.min(4, cilj.kapi - kapi.length) }, () => novaKap(true)));
-      g!.lineWidth = s;
-      g!.lineCap = 'round';
-      g!.strokeStyle = 'rgb(205 222 255)';
       for (let i = kapi.length - 1; i >= 0; i--) {
         const k = kapi[i]!;
         k.y += k.brz * dt;
@@ -190,32 +190,41 @@ export function stvoriAtmosferu(roditelj: HTMLElement): Atmosfera {
         if (k.y - k.duz > h) {
           if (kapi.length > cilj.kapi) kapi.splice(i, 1);
           else Object.assign(k, novaKap(true));
-          continue;
         }
-        g!.globalAlpha = k.a;
-        g!.beginPath();
-        g!.moveTo(k.x, k.y);
-        g!.lineTo(k.x + k.duz * NAGIB, k.y - k.duz);
-        g!.stroke();
       }
+      g!.lineWidth = s;
+      g!.lineCap = 'round';
+      g!.strokeStyle = 'rgb(205 222 255)';
+      KAP_ALFA.forEach((alfa, nivo) => {
+        g!.globalAlpha = alfa;
+        g!.beginPath();
+        for (const k of kapi) {
+          if (k.a !== nivo) continue;
+          g!.moveTo(k.x, k.y);
+          g!.lineTo(k.x + k.duz * NAGIB, k.y - k.duz);
+        }
+        g!.stroke();
+      });
 
       if (pahulje.length < cilj.pahulje) pahulje.push(...Array.from({ length: Math.min(3, cilj.pahulje - pahulje.length) }, () => novaPahulja(true)));
+      // Sve pahulje jednim potezom.
       g!.fillStyle = '#fff';
+      g!.globalAlpha = 0.55;
+      g!.beginPath();
       for (let i = pahulje.length - 1; i >= 0; i--) {
         const p = pahulje[i]!;
         p.y += p.brz * dt;
         p.faza += dt * 1.3;
-        const x = p.x + Math.sin(p.faza) * 12 * s;
         if (p.y - p.r > h) {
           if (pahulje.length > cilj.pahulje) pahulje.splice(i, 1);
           else Object.assign(p, novaPahulja(true));
           continue;
         }
-        g!.globalAlpha = 0.55;
-        g!.beginPath();
+        const x = p.x + Math.sin(p.faza) * 12 * s;
+        g!.moveTo(x + p.r, p.y);
         g!.arc(x, p.y, p.r, 0, Math.PI * 2);
-        g!.fill();
       }
+      g!.fill();
 
       // Munja: rijetko i blago (najviše jedan dvostruki bljesak u 6–14 s).
       if (cilj.munje) {
@@ -253,7 +262,22 @@ export function stvoriAtmosferu(roditelj: HTMLElement): Atmosfera {
     }
     const dt = zadnje ? Math.min(proslo, 100) / 1000 : 0;
     zadnje = t;
-    crtaj(t, dt, false);
+    if (import.meta.env.DEV) {
+      // Samo u razvoju: koliko ms traje jedna sličica (window.__atmosfera u konzoli).
+      const p = performance.now();
+      crtaj(t, dt, false);
+      const st = ((window as unknown as { __atmosfera?: { n: number; ms: number; max: number } }).__atmosfera ??= {
+        n: 0,
+        ms: 0,
+        max: 0,
+      });
+      const ms = performance.now() - p;
+      st.n++;
+      st.ms += ms;
+      st.max = Math.max(st.max, ms);
+    } else {
+      crtaj(t, dt, false);
+    }
     // Sve je dopalo, a nema ničega što se kreće: nema potrebe crtati dalje.
     if (!kapi.length && !pahulje.length && !imaPokreta()) zaustavi();
   }

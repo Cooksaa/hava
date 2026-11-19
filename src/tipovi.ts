@@ -24,6 +24,8 @@ export interface Sat {
   /** Vjetar na 10 m, km/h. */
   vjetar: number;
   udari: number;
+  /** Odakle puše, stepeni (0 = sa sjevera). Starije spremljene prognoze ga nemaju. */
+  smjer?: number;
   dan: boolean;
 }
 
@@ -49,6 +51,7 @@ export interface Sada {
   dan: boolean;
   vjetar: number;
   udari: number;
+  smjer?: number;
 }
 
 export interface Prognoza {
@@ -67,4 +70,6 @@ export interface Mjesto {
   ime: string;
   lat: number;
   lon: number;
+  /** U Bosni i Hercegovini (službena upozorenja). Nepoznato za starija spremljena mjesta. */
+  bih?: boolean;
 }

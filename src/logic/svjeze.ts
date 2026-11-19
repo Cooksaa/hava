@@ -42,6 +42,7 @@ export function uskladiSaSatom(p: Prognoza, spremljenoMs: number, sadMs: number)
       dan: sat.dan,
       vjetar: sat.vjetar,
       udari: sat.udari,
+      ...(sat.smjer !== undefined ? { smjer: sat.smjer } : {}),
     },
   };
 }

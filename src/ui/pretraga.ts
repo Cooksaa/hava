@@ -2,6 +2,7 @@ import { bezDuplih, traziMjesta, type Pogodak } from '../api/geocoding';
 import { gdjeSam, type GreskaLokacije } from '../api/lokacija';
 import { GRADOVI } from '../config';
 import { mjestoZaKoordinate, traziPoznata } from '../logic/mjesto';
+import { BIH } from '../mjesta';
 import { lokacijaGreska } from '../tekst';
 import type { Mjesto } from '../tipovi';
 import { html } from './html';
@@ -80,14 +81,14 @@ export function stvoriPretragu(naIzbor: (m: Mjesto) => void): Pretraga {
   const pocetno = (): void => {
     stanje.textContent = '';
     iscrtaj(
-      GRADOVI.map((g) => ({ ime: g.ime, lat: g.lat, lon: g.lon, opis: '' })),
+      GRADOVI.map((g) => ({ ime: g.ime, lat: g.lat, lon: g.lon, bih: true, opis: '' })),
       true,
     );
   };
 
   const izaberi = (m: Mjesto): void => {
     dijalog.close();
-    naIzbor({ ime: m.ime, lat: m.lat, lon: m.lon });
+    naIzbor({ ime: m.ime, lat: m.lat, lon: m.lon, ...(m.bih !== undefined ? { bih: m.bih } : {}) });
   };
 
   const trazi = (upit: string): void => {
@@ -100,7 +101,13 @@ export function stvoriPretragu(naIzbor: (m: Mjesto) => void): Pretraga {
     }
 
     // Ugrađena lista odmah, i bez interneta. Ostalo stiže s mreže.
-    const poznata: Pogodak[] = traziPoznata(upit).map((m) => ({ ime: m.ime, lat: m.lat, lon: m.lon, opis: m.drzava }));
+    const poznata: Pogodak[] = traziPoznata(upit).map((m) => ({
+      ime: m.ime,
+      lat: m.lat,
+      lon: m.lon,
+      bih: m.drzava === BIH,
+      opis: m.drzava,
+    }));
     iscrtaj(poznata, false);
     stanje.textContent = poznata.length ? '' : 'Tražim…';
 

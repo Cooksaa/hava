@@ -1,5 +1,6 @@
 import { GRADOVI, type Grad } from '../config';
 import { procijeniKisu } from '../logic/kisa';
+import { jadranskiKraj } from '../logic/vjetar';
 import type { StanjeGradova } from '../state';
 import { gradDetalj, kisaKratko, kisaRecenica } from '../tekst';
 import type { Prognoza } from '../tipovi';
@@ -60,7 +61,7 @@ export function prikaziGradDetalje(grad: Grad, p: Prognoza): Sirovo {
   return html`
     <div class="grad-detalji">
       <p class="list__glavno">${kisaRecenica(grad, procijeniKisu(p))}</p>
-      <p class="list__detalj">${gradDetalj(p.sada)}</p>
+      <p class="list__detalj">${gradDetalj(p.sada, jadranskiKraj(grad.lat, grad.lon))}</p>
       <h3 class="list__podnaslov">Narednih 12 sati</h3>
       ${listaSati(narednaDvadesetCetiri(p).slice(0, 12), 'Narednih 12 sati')}
     </div>

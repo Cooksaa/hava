@@ -1,4 +1,5 @@
 import type { Grad } from './config';
+import { vjetarRecenica } from './logic/vjetar';
 import type { KisaPresuda } from './logic/kisa';
 import type { VesPresuda } from './logic/ves';
 import { danUSedmici } from './logic/vrijeme';
@@ -161,16 +162,10 @@ const OPISI: Record<number, string> = {
 
 export const opisVremena = (kod: number): string => OPISI[kod] ?? 'Promjenjivo';
 
-/** Vjetar riječima, po srednjoj brzini u km/h. Udari se pominju tek kad su ozbiljni. */
-export function vjetarRecenica(vjetar: number, udari: number): string {
-  const osnovno =
-    vjetar < 6 ? 'Bez vjetra' : vjetar < 20 ? 'Vjetar slab' : vjetar < 39 ? 'Umjeren vjetar' : vjetar < 62 ? 'Jak vjetar' : 'Olujni vjetar';
-  return udari >= 45 && udari - vjetar >= 15 ? `${osnovno}, udari do ${Math.round(udari)} km/h` : osnovno;
-}
-
-export function sadaRecenica(s: Sada): string {
+/** @param jadran mjesto je u Hercegovini ili na primorju (bura, jugo), vidi logic/vjetar.ts */
+export function sadaRecenica(s: Sada, jadran = false): string {
   const osjecaj = Math.abs(Math.round(s.osjecaj) - Math.round(s.temp)) >= 2 ? `, osjećaj ${stepeni(s.osjecaj)}` : '';
-  return `${opisVremena(s.kod)}${osjecaj}. ${vjetarRecenica(s.vjetar, s.udari)}.`;
+  return `${opisVremena(s.kod)}${osjecaj}. ${vjetarRecenica(s.vjetar, s.udari, s.smjer, jadran)}.`;
 }
 
 export const rasponRecenica = (d: Dan): string => `Danas od ${stepeni(d.tMin)} do ${stepeni(d.tMax)}`;
@@ -240,6 +235,6 @@ export function vesOcjenaKratko(nivo: 'moze' | 'pazi' | 'nemoj' | null): string 
 /* --- Grad, detalji --- */
 
 /** "12°, magla. Bez vjetra." */
-export function gradDetalj(s: Sada): string {
-  return `${stepeni(s.temp)}, ${opisVremena(s.kod).toLowerCase()}. ${vjetarRecenica(s.vjetar, s.udari)}.`;
+export function gradDetalj(s: Sada, jadran = false): string {
+  return `${stepeni(s.temp)}, ${opisVremena(s.kod).toLowerCase()}. ${vjetarRecenica(s.vjetar, s.udari, s.smjer, jadran)}.`;
 }

@@ -2,6 +2,9 @@ import { GRADOVI } from '../config';
 import { primijeniMjerenje, type Mjerenje } from '../logic/mjerenje';
 import { stanjeNeba } from '../logic/nebo';
 import { uskladiSaSatom } from '../logic/svjeze';
+import { regijaZa, upozorenjaZa, type MaZapis, type Upozorenje } from '../logic/upozorenja';
+import { jadranskiKraj } from '../logic/vjetar';
+import { zrakSad } from '../logic/zrak';
 import type { Skladiste, Stanje, StanjeGradova } from '../state';
 import { greskaRecenica, osvjezenoRecenica, stepeni } from '../tekst';
 import type { Prognoza } from '../tipovi';
@@ -17,6 +20,7 @@ import { stvoriPretragu } from './pretraga';
 import { prikaziDron, prikaziGradDetalje, prikaziPutujem } from './putujem';
 import { prikaziSada, prikaziSadaKostur } from './sada';
 import { prikaziSate } from './sati';
+import { prikaziUpozorenja, upozorenjaDetalji } from './upozorenja';
 import { prikaziVes, prikaziVesDetalje } from './ves';
 
 /* Sastavlja ekran i ponovo iscrta samo dio čije se stanje promijenilo. */
@@ -43,6 +47,26 @@ function zaRazvoj(p: Prognoza): Prognoza {
 
 /** Zadnja mjerenja sa stanica (samo Android aplikacija ih dohvata, vidi android.ts). */
 let mjerenja: Mjerenje[] = [];
+
+/*
+ * Službena upozorenja (MeteoAlarm), sirovi zapisi za cijelu BiH. Dohvata ih samo Android
+ * aplikacija (android.ts); pamte se, da se upozorenje vidi i odmah pri otvaranju, bez mreže.
+ */
+const KLJUC_UPOZORENJA = 'upozorenja:v1';
+let upozorenjaZapisi: MaZapis[] = (() => {
+  try {
+    const z: unknown = JSON.parse(localStorage.getItem(KLJUC_UPOZORENJA) ?? '[]');
+    return Array.isArray(z) ? (z as MaZapis[]) : [];
+  } catch {
+    return [];
+  }
+})();
+
+function upozorenjaZaMjesto(m: Stanje['mjesto'], sad: number): Upozorenje[] {
+  if (m.bih === false) return [];
+  const regija = regijaZa(m.lat, m.lon);
+  return regija ? upozorenjaZa(upozorenjaZapisi, regija, sad) : [];
+}
 
 /** Prognoza kakvu treba prikazati sad: usklađena s tekućim satom i mjerenjem, ili null ako je nema. */
 function zaPrikaz(s: Stanje): Prognoza | null {
@@ -84,7 +108,8 @@ function prognoza(s: Stanje): Sirovo {
     ${s.zastarjelo && s.spremljeno
       ? html`<p class="napomena" role="status">${osvjezenoRecenica(s.spremljeno)}</p>`
       : ''}
-    ${prikaziSada(p)} ${prikaziVes(p)}
+    ${prikaziSada(p, jadranskiKraj(s.mjesto.lat, s.mjesto.lon), s.zrak ? zrakSad(s.zrak, p.sada.vrijeme) : null)}
+    ${prikaziVes(p)}
     <div class="podloga prognoza">${prikaziSate(p)} ${prikaziDane(p)}</div>
   `;
 }
@@ -110,6 +135,7 @@ export interface Aplikacija {
   osvjeziPrikaz(): void;
   pokaziNovuVerziju(verzija: string, link: string): void;
   postaviMjerenja(m: Mjerenje[]): void;
+  postaviUpozorenja(z: MaZapis[]): void;
 }
 
 export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikacija {
@@ -128,6 +154,7 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
           ${ikonaUi('lupa')}
         </button>
       </header>
+      <div data-dio="upozorenja"></div>
       <div data-dio="novo"></div>
       <main>
         <div data-dio="prognoza"></div>
@@ -142,7 +169,9 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
         <span>
           Podaci:
           <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>,
-          ICON-2I
+          ICON-2I, CAMS${APLIKACIJA
+            ? html`, <a href="https://meteoalarm.org/" target="_blank" rel="noopener">MeteoAlarm</a>`
+            : ''}
         </span>
       </footer>
     </div>
@@ -157,6 +186,14 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
   const mjestoEl = dio('mjesto');
   const prognozaEl = dio('prognoza');
   const putujemEl = dio('putujem');
+  const upozorenjaEl = dio('upozorenja');
+  /** Šta je zadnje iscrtano, da se traka ne crta ponovo bez promjene. */
+  let prikazanaUpozorenja = '';
+  const iscrtajUpozorenja = (s: Stanje): void => {
+    const sad = Date.now();
+    const sadrzaj = prikaziUpozorenja(upozorenjaZaMjesto(s.mjesto, sad), sad).html;
+    if (sadrzaj !== prikazanaUpozorenja) upozorenjaEl.innerHTML = prikazanaUpozorenja = sadrzaj;
+  };
 
   const list = stvoriList();
   pokaziNovosti(dio('novo'), list);
@@ -174,13 +211,15 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
 
   const iscrtaj = (s: Stanje): void => {
     mjestoEl.textContent = s.mjesto.ime;
+    iscrtajUpozorenja(s);
 
     // Gradovi stižu poslije prognoze: bez ovoga bi lista sati skočila na početak.
     const promijenjenaPrognoza =
       !prije ||
       prije.prognoza !== s.prognoza ||
       prije.status !== s.status ||
-      prije.zastarjelo !== s.zastarjelo;
+      prije.zastarjelo !== s.zastarjelo ||
+      prije.zrak !== s.zrak;
     if (promijenjenaPrognoza) {
       prognozaEl.innerHTML = prognoza(s).html;
       const p = zaPrikaz(s);
@@ -232,6 +271,12 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
       case 'pretraga':
         pretraga.otvori();
         break;
+      case 'upozorenja': {
+        const sad = Date.now();
+        const lista = upozorenjaZaMjesto(s.mjesto, sad);
+        if (lista.length) list.otvori(lista.length > 1 ? 'Upozorenja' : 'Upozorenje', upozorenjaDetalji(lista, sad));
+        break;
+      }
       case 'ves': {
         const p = zaPrikaz(s);
         if (p) list.otvori(`Veš, ${s.mjesto.ime}`, prikaziVesDetalje(p));
@@ -257,6 +302,17 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
     osvjeziPrikaz() {
       prije = null;
       iscrtaj(skladiste.daj());
+    },
+    postaviUpozorenja(z: MaZapis[]) {
+      // Pamte se samo ona koja još nisu istekla: feed nosi i sedmicu starih.
+      const sad = Date.now();
+      upozorenjaZapisi = z.filter((x) => x.alert?.info?.some((i) => !i.expires || Date.parse(i.expires) > sad));
+      try {
+        localStorage.setItem(KLJUC_UPOZORENJA, JSON.stringify(upozorenjaZapisi));
+      } catch {
+        // Bez pamćenja: vidi se dok je aplikacija otvorena.
+      }
+      iscrtajUpozorenja(skladiste.daj());
     },
     postaviMjerenja(m: Mjerenje[]) {
       mjerenja = m;

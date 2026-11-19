@@ -454,3 +454,104 @@ button.grad:active {
 .grad-detalji .sati {
   margin: 10px -20px 0;
 }
+
+/* --- Službeno upozorenje (ui/upozorenja.ts) --- */
+
+[data-nivo='2'] {
+  --nivo-boja: var(--upozorenje-zuto);
+}
+
+[data-nivo='3'] {
+  --nivo-boja: var(--upozorenje-narandzasto);
+}
+
+[data-nivo='4'] {
+  --nivo-boja: var(--upozorenje-crveno);
+}
+
+.upozorenje {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  margin-top: 10px;
+  padding: 10px 14px 10px 12px;
+  border-radius: var(--r-mali);
+  /* Boja nivoa: traka lijevo i blagi odsjaj, da se vidi i preko kišnog neba. */
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--nivo-boja) 22%, transparent),
+      color-mix(in srgb, var(--nivo-boja) 6%, transparent) 60%
+    ),
+    rgb(var(--staklo-rgb) / var(--staklo-a));
+  box-shadow: inset 4px 0 0 var(--nivo-boja);
+  text-align: left;
+  transition: transform var(--brzo) ease-out;
+}
+
+.upozorenje:active {
+  transform: scale(0.98);
+}
+
+.upozorenje__znak {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--nivo-boja);
+  color: var(--tinta);
+  font-size: 18px;
+}
+
+.upozorenje__tekst {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.upozorenje__naslov {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.upozorenje__kad {
+  font-size: 0.8125rem;
+  color: var(--tekst-tihi);
+}
+
+.upozorenje__strelica {
+  flex: none;
+  opacity: 0.7;
+}
+
+.upozorenje-detalj {
+  padding: 14px 0 16px 14px;
+  box-shadow: inset 3px 0 0 var(--nivo-boja);
+}
+
+.upozorenje-detalj + .upozorenje-detalj {
+  margin-top: 8px;
+}
+
+.upozorenje-detalj__naslov {
+  font-size: 1.1875rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.upozorenje-detalj__opis {
+  margin-top: 10px;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.upozorenje-izvor {
+  margin-top: 20px;
+  font-size: 0.8125rem;
+  color: var(--tekst-tihi);
+}

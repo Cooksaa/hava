@@ -27,6 +27,7 @@ const SADA = [
   'is_day',
   'wind_speed_10m',
   'wind_gusts_10m',
+  'wind_direction_10m',
 ].join(',');
 
 const PO_SATIMA = [
@@ -38,6 +39,7 @@ const PO_SATIMA = [
   'cloud_cover',
   'wind_speed_10m',
   'wind_gusts_10m',
+  'wind_direction_10m',
   'is_day',
 ].join(',');
 
@@ -68,6 +70,7 @@ export interface OmOdgovor {
     is_day: number | null;
     wind_speed_10m: number | null;
     wind_gusts_10m: number | null;
+    wind_direction_10m?: number | null;
   };
   hourly: {
     time: string[];
@@ -79,6 +82,7 @@ export interface OmOdgovor {
     cloud_cover: Niz;
     wind_speed_10m: Niz;
     wind_gusts_10m: Niz;
+    wind_direction_10m?: Niz;
     is_day: Niz;
   };
   daily: {
@@ -174,6 +178,12 @@ export class GreskaPrognoze extends Error {
 
 const broj = (niz: Niz, i: number): number => niz[i] ?? 0;
 
+/** Smjer nema smislenu nulu (0 = sjever), pa rupa ostaje rupa. */
+function smjerSata(niz: Niz | undefined, i: number): { smjer?: number } {
+  const v = niz?.[i];
+  return typeof v === 'number' ? { smjer: v } : {};
+}
+
 /** Open-Meteo odgovor → naš oblik. Rupe u podacima (null) postaju 0. */
 export function uPrognozu(o: OmOdgovor): Prognoza {
   const h = o.hourly;
@@ -189,6 +199,7 @@ export function uPrognozu(o: OmOdgovor): Prognoza {
     oblaci: broj(h.cloud_cover, i),
     vjetar: broj(h.wind_speed_10m, i),
     udari: broj(h.wind_gusts_10m, i),
+    ...smjerSata(h.wind_direction_10m, i),
     dan: broj(h.is_day, i) === 1,
   }));
 
@@ -219,6 +230,7 @@ export function uPrognozu(o: OmOdgovor): Prognoza {
       dan: c.is_day === 1,
       vjetar: c.wind_speed_10m ?? 0,
       udari: c.wind_gusts_10m ?? 0,
+      ...(typeof c.wind_direction_10m === 'number' ? { smjer: c.wind_direction_10m } : {}),
     },
     sati,
     dani,

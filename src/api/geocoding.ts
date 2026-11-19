@@ -15,6 +15,7 @@ interface OmMjesto {
   latitude: number;
   longitude: number;
   country?: string;
+  country_code?: string;
   admin1?: string;
   feature_code?: string;
 }
@@ -49,6 +50,7 @@ export async function traziMjesta(ime: string, signal?: AbortSignal): Promise<Po
       ime: r.name,
       lat: r.latitude,
       lon: r.longitude,
+      bih: r.country_code === 'BA',
       opis: [r.admin1, r.country].filter((x) => x && x !== r.name).join(', '),
     })),
   ).slice(0, 8);

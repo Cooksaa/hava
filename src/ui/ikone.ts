@@ -39,6 +39,8 @@ import zatvori from '@phosphor-icons/core/assets/regular/x.svg?raw';
 import osvjezi from '@phosphor-icons/core/assets/regular/arrow-clockwise.svg?raw';
 import strelica from '@phosphor-icons/core/assets/regular/caret-right.svg?raw';
 import kap from '@phosphor-icons/core/assets/fill/drop-fill.svg?raw';
+import smjer from '@phosphor-icons/core/assets/fill/navigation-arrow-fill.svg?raw';
+import upozorenje from '@phosphor-icons/core/assets/fill/warning-fill.svg?raw';
 
 const VRIJEME = {
   'vedro-dan': vedroDan,
@@ -64,7 +66,7 @@ const VRIJEME = {
   grad,
 } as const;
 
-const UI = { majica, auto, dron, lupa, lokacija, zatvori, osvjezi, strelica, kap } as const;
+const UI = { majica, auto, dron, lupa, lokacija, zatvori, osvjezi, strelica, kap, smjer, upozorenje } as const;
 
 export type IkonaVremena = keyof typeof VRIJEME;
 export type IkonaUi = keyof typeof UI;

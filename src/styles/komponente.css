@@ -71,6 +71,33 @@
   font-size: 0.9375rem;
 }
 
+/* Zrak: tačka u boji kategorije (0–1 dobro, 2 pazi, 3+ loše). */
+.sada__zrak {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+  max-width: 34ch;
+  font-size: 0.9375rem;
+}
+
+.sada__tacka {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--moze);
+  transform: translateY(-1px);
+}
+
+.sada__zrak[data-k='2'] .sada__tacka {
+  background: var(--pazi);
+}
+
+.sada__zrak:is([data-k='3'], [data-k='4'], [data-k='5']) .sada__tacka {
+  background: var(--nemoj);
+}
+
 .sada__izvor {
   margin-top: 6px;
   font-size: 0.8125rem;
@@ -351,6 +378,26 @@
 .sat__kisa {
   font-size: 0.75rem;
   white-space: nowrap;
+}
+
+/* Vjetar, km/h: red postoji samo kad je bar jedan sat vjetrovit (ui/sati.ts). */
+.sati--vjetar .sat {
+  grid-template-rows: 22px 36px 26px 18px 18px;
+}
+
+.sat__vjetar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.75rem;
+  color: var(--tekst-tihi);
+  white-space: nowrap;
+}
+
+.sat__smjer {
+  display: inline-grid;
+  font-size: 0.75rem;
+  transform: rotate(var(--okret));
 }
 
 /* --- 7 dana --- */

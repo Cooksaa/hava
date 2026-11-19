@@ -18,6 +18,10 @@
   --kisa: #b3dbff;
   /* Tamna boja za znak na obojenoj podlozi. */
   --tinta: #0b1a2b;
+  /* Službena upozorenja: boje MeteoAlarma, malo smirene da ne vrište na tamnom nebu. */
+  --upozorenje-zuto: #f2cb4c;
+  --upozorenje-narandzasto: #f08c3a;
+  --upozorenje-crveno: #e5484d;
 
   /* Radijusi po pravilu: velika površina 28, unutrašnji element 14, dugme pilula. */
   --r-velik: 28px;
