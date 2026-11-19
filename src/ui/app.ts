@@ -1,6 +1,7 @@
 import { GRADOVI } from '../config';
 import { primijeniMjerenje, type Mjerenje } from '../logic/mjerenje';
 import { stanjeNeba } from '../logic/nebo';
+import { opisAzuriranja, type StanjeAzuriranja } from '../logic/stanjeAzuriranja';
 import { uskladiSaSatom } from '../logic/svjeze';
 import { regijaZa, upozorenjaZa, type MaZapis, type Upozorenje } from '../logic/upozorenja';
 import { jadranskiKraj } from '../logic/vjetar';
@@ -136,6 +137,25 @@ export interface Aplikacija {
   pokaziNovuVerziju(verzija: string, link: string): void;
   postaviMjerenja(m: Mjerenje[]): void;
   postaviUpozorenja(z: MaZapis[]): void;
+  postaviAzuriranje(a: Azuriranje): void;
+}
+
+/** Android: stanje ažuriranja i ručna provjera (android.ts). */
+export interface Azuriranje {
+  stanje(): StanjeAzuriranja;
+  provjeri(): Promise<void>;
+}
+
+/** Krug na dugmetu se vrti bar ovoliko, i kad GitHub odgovori odmah. */
+const NAJMANJE_PROVJERAVA_MS = 700;
+
+function azuriranjeDetalji(a: Azuriranje): Sirovo {
+  const { glavno, detalji } = opisAzuriranja(a.stanje(), __VERSIJA__, Date.now());
+  return html`
+    <p class="list__glavno">${glavno}</p>
+    ${detalji.map((d) => html`<p class="list__detalj">${d}</p>`)}
+    <button class="dugme" type="button" data-provjeri>${ikonaUi('osvjezi')}<span>Provjeri sad</span></button>
+  `;
 }
 
 export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikacija {
@@ -165,7 +185,11 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
       </main>
       <div data-dio="azuriranje"></div>
       <footer class="izvor">
-        ${APLIKACIJA ? html`<span class="izvor__verzija">Hava ${__VERSIJA__}</span>` : ''}
+        ${APLIKACIJA
+          ? html`<button class="izvor__verzija" type="button" data-akcija="verzija" aria-haspopup="dialog">
+              Hava ${__VERSIJA__}
+            </button>`
+          : ''}
         <span>
           Podaci:
           <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>,
@@ -196,6 +220,7 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
   };
 
   const list = stvoriList();
+  let azuriranje: Azuriranje | null = null;
   pokaziNovosti(dio('novo'), list);
   const pretraga = stvoriPretragu((m) => {
     window.scrollTo({ top: 0 });
@@ -289,10 +314,31 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
         if (grad && p) list.otvori(grad.ime, prikaziGradDetalje(grad, p));
         break;
       }
+      case 'verzija':
+        if (azuriranje) list.otvori(`Hava ${__VERSIJA__}`, azuriranjeDetalji(azuriranje));
+        break;
     }
   });
 
-  povuciZaOsvjezi(() => skladiste.osvjezi());
+  // "Provjeri sad" je u listu, a list nije unutar korijena.
+  document.addEventListener('click', (e) => {
+    const dugme = (e.target as Element).closest<HTMLButtonElement>('[data-provjeri]');
+    if (!dugme || !azuriranje || dugme.disabled) return;
+    const a = azuriranje;
+    dugme.disabled = true;
+    dugme.classList.add('dugme--radi');
+    dugme.querySelector('span')!.textContent = 'Provjeravam';
+    const cekaj = new Promise((r) => setTimeout(r, NAJMANJE_PROVJERAVA_MS));
+    void Promise.all([a.provjeri(), cekaj]).finally(() => {
+      if (dugme.isConnected) list.otvori(`Hava ${__VERSIJA__}`, azuriranjeDetalji(a));
+    });
+  });
+
+  povuciZaOsvjezi(() => {
+    // Povlačenje provjeri i novu verziju, bez čekanja na nju.
+    void azuriranje?.provjeri();
+    return skladiste.osvjezi();
+  });
 
   skladiste.prati(iscrtaj);
   iscrtaj(skladiste.daj());
@@ -318,6 +364,9 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
       mjerenja = m;
       prije = null;
       iscrtaj(skladiste.daj());
+    },
+    postaviAzuriranje(a: Azuriranje) {
+      azuriranje = a;
     },
     // Android, kad treba novi APK: tiha linija na dnu. Bez pop-upa.
     pokaziNovuVerziju(verzija: string, link: string) {

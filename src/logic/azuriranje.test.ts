@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { odlukaAzuriranja, procitajIzdanje, type GhIzdanje, type Izdanje } from './azuriranje';
+import { odlukaAzuriranja, procitajIzdanje, procitajManifest, type GhIzdanje, type Izdanje } from './azuriranje';
 
 const BAZA = 'https://github.com/Cooksaa/hava/releases/download';
 
@@ -69,5 +69,30 @@ describe('odlukaAzuriranja', () => {
 
   it('web dio noviji od izdanja (ne bi se smjelo desiti): ništa', () => {
     expect(odlukaAzuriranja(izdanje('0.2.3', '0.2.0'), '0.2.4', '0.2.0').vrsta).toBe('nista');
+  });
+});
+
+describe('procitajManifest', () => {
+  const ispravan = {
+    verzija: '0.4.1',
+    minApk: '0.2.0',
+    apk: `${BAZA}/v0.4.1/Hava-0.4.1.apk`,
+    web: `${BAZA}/v0.4.1/Hava-web-0.4.1-apk-0.2.0.zip`,
+  };
+
+  it('čita izdanje.json', () => {
+    expect(procitajManifest(ispravan)).toEqual({
+      verzija: '0.4.1',
+      apk: ispravan.apk,
+      web: { url: ispravan.web, minApk: '0.2.0' },
+    });
+  });
+
+  it('odbija pokvaren ili nepotpun', () => {
+    expect(procitajManifest(null)).toBeNull();
+    expect(procitajManifest('x')).toBeNull();
+    expect(procitajManifest({ ...ispravan, web: undefined })).toBeNull();
+    expect(procitajManifest({ ...ispravan, verzija: 'v0.4.1' })).toBeNull();
+    expect(procitajManifest({ ...ispravan, web: 'http://neko.ba/x.zip' })).toBeNull();
   });
 });

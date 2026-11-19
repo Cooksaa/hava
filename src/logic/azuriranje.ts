@@ -40,6 +40,30 @@ export function procitajIzdanje(gh: GhIzdanje): Izdanje {
   return { verzija, apk: apk?.browser_download_url ?? gh.html_url, web };
 }
 
+/*
+ * Od 0.4.1 svako izdanje ima i izdanje.json. Čita se preko
+ * github.com/…/releases/latest/download/izdanje.json, što nije GitHub API pa nema
+ * ograničenja od 60 upita na sat po IP adresi (na mobilnoj mreži tu adresu dijele
+ * stotine ljudi, pa se limit zna potrošiti i bez nas).
+ */
+export interface Manifest {
+  verzija: string;
+  minApk: string;
+  apk: string;
+  web: string;
+}
+
+/** izdanje.json → Izdanje, ili null ako nije ispravan. */
+export function procitajManifest(m: unknown): Izdanje | null {
+  if (!m || typeof m !== 'object') return null;
+  const { verzija, minApk, apk, web } = m as Partial<Manifest>;
+  const ispravno = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
+  if (!ispravno(verzija) || !ispravno(minApk) || !ispravno(apk) || !ispravno(web)) return null;
+  if (!/^\d+\.\d+\.\d+$/.test(verzija) || !/^\d+\.\d+\.\d+$/.test(minApk)) return null;
+  if (!apk.startsWith('https://') || !web.startsWith('https://')) return null;
+  return { verzija, apk, web: { url: web, minApk } };
+}
+
 export type Odluka =
   | { vrsta: 'nista' }
   | { vrsta: 'tiho'; verzija: string; url: string }

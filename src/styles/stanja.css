@@ -244,3 +244,32 @@ html {
 .list__sadrzaj > .list__podnaslov:first-child {
   margin-top: 8px;
 }
+
+/* Dodir na "Hava 0.4.1" na dnu: stanje ažuriranja (Android). Dodirna površina 44 px
+   izlazi van pilule, pa podnožje ne raste. */
+.izvor__verzija {
+  position: relative;
+  text-decoration: underline;
+  text-decoration-color: rgb(255 255 255 / 0.35);
+  text-underline-offset: 3px;
+}
+
+.izvor__verzija::after {
+  content: '';
+  position: absolute;
+  inset: -14px -10px;
+}
+
+.dugme--radi {
+  opacity: 0.75;
+}
+
+.dugme--radi svg {
+  animation: vrti 800ms linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dugme--radi svg {
+    animation-duration: 1600ms;
+  }
+}

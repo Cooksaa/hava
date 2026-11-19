@@ -169,12 +169,18 @@ jobs:
           (cd dist && zip -qr -X "$PAKET" .)
           unzip -l "$PAKET" | grep -q ' index.html$' || { echo "::error::Paket nema index.html."; exit 1; }
           echo "WEB_PAKET=$PAKET" >> "$GITHUB_ENV"
+          # Šta aplikacija čita pri provjeri (src/api/azuriranje.ts), bez GitHub API-ja.
+          BAZA="https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME"
+          jq -n --arg v "$VERZIJA" --arg m "$MIN_APK" \
+            --arg a "$BAZA/Hava-$VERZIJA.apk" --arg w "$BAZA/$(basename "$PAKET")" \
+            '{verzija: $v, minApk: $m, apk: $a, web: $w}' > "$RUNNER_TEMP/izdanje.json"
+          cat "$RUNNER_TEMP/izdanje.json"
 
       - name: GitHub izdanje
         if: env.JE_IZDANJE == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP/Hava-$VERZIJA.apk" "$WEB_PAKET" \
+          gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP/Hava-$VERZIJA.apk" "$WEB_PAKET" "$RUNNER_TEMP/izdanje.json" \
             --title "Hava $VERZIJA" \
             --notes "Android aplikacija. Preuzmi Hava-$VERZIJA.apk na mobitelu i otvori ga. Ako Android pita, dozvoli instalaciju iz ovog izvora. Web verzija: https://cooksaa.github.io/hava/"

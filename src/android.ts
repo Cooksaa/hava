@@ -1,7 +1,7 @@
 import { App } from '@capacitor/app';
 import { CapacitorHttp } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
-import { zadnjeIzdanje } from './api/azuriranje';
+import { citajStanje, dohvatiIzdanje, pisiStanje, type Zapamceno } from './api/azuriranje';
 import { odlukaAzuriranja } from './logic/azuriranje';
 import { AERODROMI, zadnjaMjerenja, type MetarZapis } from './logic/mjerenje';
 import type { MaZapis } from './logic/upozorenja';
@@ -30,6 +30,10 @@ export function pokreniAndroid(app: Aplikacija): void {
     void App.minimizeApp();
   });
 
+  app.postaviAzuriranje({
+    stanje: () => citajStanje(),
+    provjeri: () => azuriraj(app, true),
+  });
   void azuriraj(app);
   void izmjeri(app);
   void upozori(app);
@@ -92,40 +96,72 @@ async function upozori(app: Aplikacija): Promise<void> {
   }
 }
 
-let radi = false;
+/** Svakih 15 minuta pri otvaranju; "Provjeri sad" i povlačenje ekrana ne čekaju toliko. */
+const PROVJERI_NAKON_MS = 15 * 60 * 1000;
+const PRISILNO_NAKON_MS = 20 * 1000;
+let radi: Promise<void> | null = null;
 
 /**
  * Nova verzija web dijela se skine u pozadini i uključi kad korisnik izađe iz
  * aplikacije, pa je sljedeći put već tu. Ništa ne prekida i ništa ne pita.
  * Samo kad treba novi APK, na dnu se pokaže "Nova verzija · Preuzmi".
+ * Svaki korak se zapiše (citajStanje), da se na telefonu vidi gdje je zapelo.
  */
-async function azuriraj(app: Aplikacija): Promise<void> {
-  if (radi) return;
-  radi = true;
+function azuriraj(app: Aplikacija, prisili = false): Promise<void> {
+  radi ??= azurirajSad(app, prisili).finally(() => (radi = null));
+  return radi;
+}
+
+async function azurirajSad(app: Aplikacija, prisili: boolean): Promise<void> {
+  let st = citajStanje();
+  const sacuvaj = (izmjena: Partial<Zapamceno>): void => {
+    st = { ...st, ...izmjena };
+    pisiStanje(st);
+  };
+
+  const zadnjiPut = Math.max(st.provjereno ?? 0, st.neuspjeh?.kad ?? 0);
+  const svjeze = Date.now() - (st.provjereno ?? 0) < PROVJERI_NAKON_MS;
+  let izdanje = st.izdanje;
+  if (!(prisili ? Date.now() - zadnjiPut < PRISILNO_NAKON_MS : svjeze)) {
+    try {
+      izdanje = await dohvatiIzdanje();
+      sacuvaj({ izdanje, zadnja: izdanje.verzija, provjereno: Date.now(), neuspjeh: null });
+    } catch (e) {
+      sacuvaj({ neuspjeh: { kad: Date.now(), zasto: e instanceof Error ? e.message : 'nepoznato' } });
+    }
+  }
+  if (!izdanje) return;
+
   try {
-    const izdanje = await zadnjeIzdanje();
-    if (!izdanje) return;
     const { version: apk } = await App.getInfo();
     const odluka = odlukaAzuriranja(izdanje, __VERSIJA__, apk);
 
     if (odluka.vrsta === 'preuzmi') {
+      sacuvaj({ paket: { verzija: odluka.verzija, status: 'treba-apk' } });
       app.pokaziNovuVerziju(odluka.verzija, odluka.link);
       return;
     }
-    if (odluka.vrsta !== 'tiho') return;
+    if (odluka.vrsta !== 'tiho') {
+      if (st.paket) sacuvaj({ paket: null });
+      return;
+    }
 
     const { bundles } = await CapacitorUpdater.list();
     const vec = bundles.find((b) => b.version === odluka.verzija);
     // Ta verzija je već pala jednom (vraćena je): ne skidaj je ukrug.
-    if (vec?.status === 'error') return;
-    const paket =
-      vec && (vec.status === 'success' || vec.status === 'pending')
-        ? vec
-        : await CapacitorUpdater.download({ url: odluka.url, version: odluka.verzija });
+    if (vec?.status === 'error') {
+      sacuvaj({ paket: { verzija: odluka.verzija, status: 'pao' } });
+      return;
+    }
+    let paket = vec && (vec.status === 'success' || vec.status === 'pending') ? vec : null;
+    if (!paket) {
+      sacuvaj({ paket: { verzija: odluka.verzija, status: 'skida' } });
+      paket = await CapacitorUpdater.download({ url: odluka.url, version: odluka.verzija });
+    }
     await CapacitorUpdater.next({ id: paket.id });
+    sacuvaj({ paket: { verzija: odluka.verzija, status: 'spreman' } });
   } catch {
-    // Bez mreže ili GitHub ne odgovara: probaj opet sljedeći put.
-  } finally {
-    radi = false;
+    // Skidanje prekinuto (mreža): probaj opet sljedeći put.
+    sacuvaj({ paket: null, neuspjeh: { kad: Date.now(), zasto: 'skidanje nove verzije nije uspjelo' } });
   }
 }
