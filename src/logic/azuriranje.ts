@@ -16,14 +16,23 @@ export interface Izdanje {
   verzija: string;
   /** Link za APK, ili stranica izdanja ako APK-a nema. */
   apk: string;
-  web: { url: string; minApk: string } | null;
+  /**
+   * Paket web dijela. sha256 (mala slova, hex) dodatak za ažuriranje traži obavezno:
+   * bez njega odbije skinuti paket (zato do 0.5.1 ništa nije stizalo samo).
+   */
+  web: { url: string; minApk: string; sha256: string | null } | null;
 }
 
 export interface GhIzdanje {
   tag_name: string;
   html_url: string;
-  assets?: { name: string; browser_download_url: string }[];
+  /** digest: "sha256:…" (GitHub ga daje za svaki fajl izdanja). */
+  assets?: { name: string; browser_download_url: string; digest?: string | null }[];
 }
+
+/** Ispravan SHA-256 (64 hex znaka) malim slovima, ili null. */
+const sha = (v: unknown): string | null =>
+  typeof v === 'string' && /^[0-9a-f]{64}$/i.test(v) ? v.toLowerCase() : null;
 
 const WEB_PAKET = /^Hava-web-(\d+\.\d+\.\d+)-apk-(\d+\.\d+\.\d+)\.zip$/;
 
@@ -35,7 +44,7 @@ export function procitajIzdanje(gh: GhIzdanje): Izdanje {
   for (const a of assets) {
     const m = WEB_PAKET.exec(a.name);
     // Paket mora biti baš za ovu verziju, ne neki zaostali.
-    if (m && m[1] === verzija && m[2]) web = { url: a.browser_download_url, minApk: m[2] };
+    if (m && m[1] === verzija && m[2]) web = { url: a.browser_download_url, minApk: m[2], sha256: sha(a.digest?.replace(/^sha256:/, '')) };
   }
   return { verzija, apk: apk?.browser_download_url ?? gh.html_url, web };
 }
@@ -51,22 +60,24 @@ export interface Manifest {
   minApk: string;
   apk: string;
   web: string;
+  /** SHA-256 paketa web dijela (od 0.5.1). */
+  sha256?: string;
 }
 
 /** izdanje.json → Izdanje, ili null ako nije ispravan. */
 export function procitajManifest(m: unknown): Izdanje | null {
   if (!m || typeof m !== 'object') return null;
-  const { verzija, minApk, apk, web } = m as Partial<Manifest>;
+  const { verzija, minApk, apk, web, sha256 } = m as Partial<Manifest>;
   const ispravno = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
   if (!ispravno(verzija) || !ispravno(minApk) || !ispravno(apk) || !ispravno(web)) return null;
   if (!/^\d+\.\d+\.\d+$/.test(verzija) || !/^\d+\.\d+\.\d+$/.test(minApk)) return null;
   if (!apk.startsWith('https://') || !web.startsWith('https://')) return null;
-  return { verzija, apk, web: { url: web, minApk } };
+  return { verzija, apk, web: { url: web, minApk, sha256: sha(sha256) } };
 }
 
 export type Odluka =
   | { vrsta: 'nista' }
-  | { vrsta: 'tiho'; verzija: string; url: string }
+  | { vrsta: 'tiho'; verzija: string; url: string; sha256: string | null }
   | { vrsta: 'preuzmi'; verzija: string; link: string };
 
 /**
@@ -75,7 +86,7 @@ export type Odluka =
  */
 export function odlukaAzuriranja(iz: Izdanje, web: string, apk: string): Odluka {
   if (iz.web && jeNovija(iz.verzija, web) && !jeNovija(iz.web.minApk, apk)) {
-    return { vrsta: 'tiho', verzija: iz.verzija, url: iz.web.url };
+    return { vrsta: 'tiho', verzija: iz.verzija, url: iz.web.url, sha256: iz.web.sha256 };
   }
   // Novi APK treba samo kad je izdanje novije i od onoga što radi i od instaliranog APK-a.
   if (jeNovija(iz.verzija, web) && jeNovija(iz.verzija, apk)) {

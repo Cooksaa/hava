@@ -155,13 +155,22 @@ async function azurirajSad(app: Aplikacija, prisili: boolean): Promise<void> {
     }
     let paket = vec && (vec.status === 'success' || vec.status === 'pending') ? vec : null;
     if (!paket) {
+      // Dodatak bez SHA-256 odbija skinuti paket (i to je dobro: zna se da je paket naš i cio).
+      if (!odluka.sha256) {
+        sacuvaj({ paket: null, neuspjeh: { kad: Date.now(), zasto: 'izdanje nema kontrolni zbir paketa' } });
+        return;
+      }
       sacuvaj({ paket: { verzija: odluka.verzija, status: 'skida' } });
-      paket = await CapacitorUpdater.download({ url: odluka.url, version: odluka.verzija });
+      paket = await CapacitorUpdater.download({ url: odluka.url, version: odluka.verzija, checksum: odluka.sha256 });
     }
     await CapacitorUpdater.next({ id: paket.id });
     sacuvaj({ paket: { verzija: odluka.verzija, status: 'spreman' } });
-  } catch {
-    // Skidanje prekinuto (mreža): probaj opet sljedeći put.
-    sacuvaj({ paket: null, neuspjeh: { kad: Date.now(), zasto: 'skidanje nove verzije nije uspjelo' } });
+  } catch (e) {
+    // Skidanje prekinuto (mreža) ili odbijeno: probaj opet sljedeći put, a razlog se vidi na ekranu.
+    const razlog = e instanceof Error && e.message ? e.message.replace(/https?:\/\/\S+/g, '').trim().slice(0, 80) : '';
+    sacuvaj({
+      paket: null,
+      neuspjeh: { kad: Date.now(), zasto: `skidanje nove verzije nije uspjelo${razlog ? ` (${razlog})` : ''}` },
+    });
   }
 }

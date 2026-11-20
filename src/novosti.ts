@@ -7,6 +7,10 @@ import type { Novost } from './logic/novosti';
  */
 export const NOVOSTI: Novost[] = [
   {
+    verzija: '0.5.1',
+    stavke: ['Popravljeno ažuriranje: nove verzije sad stižu same, bez instaliranja APK-a.'],
+  },
+  {
     verzija: '0.5.0',
     stavke: [
       'Kiša s radara: kad je kiša blizu, ispod temperature piše kad počinje ili staje, s trakom za naredna 2 sata.',

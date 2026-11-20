@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { odlukaAzuriranja, procitajIzdanje, procitajManifest, type GhIzdanje, type Izdanje } from './azuriranje';
 
+const SHA = '0bf86dae516c80355c51eb7fa031e12c803bd1e70b7a01631cf92cb6acad708d';
 const BAZA = 'https://github.com/Cooksaa/hava/releases/download';
 
 function gh(tag: string, imena: string[]): GhIzdanje {
   return {
     tag_name: tag,
     html_url: `https://github.com/Cooksaa/hava/releases/tag/${tag}`,
-    assets: imena.map((name) => ({ name, browser_download_url: `${BAZA}/${tag}/${name}` })),
+    assets: imena.map((name) => ({ name, browser_download_url: `${BAZA}/${tag}/${name}`, digest: `sha256:${SHA.toUpperCase()}` })),
   };
 }
 
@@ -16,7 +17,7 @@ describe('procitajIzdanje', () => {
     const iz = procitajIzdanje(gh('v0.2.3', ['Hava-0.2.3.apk', 'Hava-web-0.2.3-apk-0.2.0.zip']));
     expect(iz.verzija).toBe('0.2.3');
     expect(iz.apk).toBe(`${BAZA}/v0.2.3/Hava-0.2.3.apk`);
-    expect(iz.web).toEqual({ url: `${BAZA}/v0.2.3/Hava-web-0.2.3-apk-0.2.0.zip`, minApk: '0.2.0' });
+    expect(iz.web).toEqual({ url: `${BAZA}/v0.2.3/Hava-web-0.2.3-apk-0.2.0.zip`, minApk: '0.2.0', sha256: SHA });
   });
 
   it('staro izdanje bez paketa: samo APK', () => {
@@ -36,7 +37,7 @@ describe('odlukaAzuriranja', () => {
   const izdanje = (verzija: string, minApk: string | null): Izdanje => ({
     verzija,
     apk: `apk-${verzija}`,
-    web: minApk ? { url: `web-${verzija}`, minApk } : null,
+    web: minApk ? { url: `web-${verzija}`, minApk, sha256: SHA } : null,
   });
 
   it('nova web verzija na dovoljno novom APK-u: tiho', () => {
@@ -44,6 +45,7 @@ describe('odlukaAzuriranja', () => {
       vrsta: 'tiho',
       verzija: '0.2.3',
       url: 'web-0.2.3',
+      sha256: SHA,
     });
   });
 
@@ -84,8 +86,10 @@ describe('procitajManifest', () => {
     expect(procitajManifest(ispravan)).toEqual({
       verzija: '0.4.1',
       apk: ispravan.apk,
-      web: { url: ispravan.web, minApk: '0.2.0' },
+      web: { url: ispravan.web, minApk: '0.2.0', sha256: null },
     });
+    expect(procitajManifest({ ...ispravan, sha256: SHA })?.web?.sha256).toBe(SHA);
+    expect(procitajManifest({ ...ispravan, sha256: 'nije-zbir' })?.web?.sha256).toBeNull();
   });
 
   it('odbija pokvaren ili nepotpun', () => {
