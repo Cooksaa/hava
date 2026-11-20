@@ -23,6 +23,7 @@ import { prikaziSada, prikaziSadaKostur } from './sada';
 import { prikaziSate } from './sati';
 import { prikaziUpozorenja, upozorenjaDetalji } from './upozorenja';
 import { prikaziVes, prikaziVesDetalje } from './ves';
+import { kisaZaPrikaz, prikaziKisuSad } from './kisaSad';
 
 /* Sastavlja ekran i ponovo iscrta samo dio čije se stanje promijenilo. */
 
@@ -105,12 +106,14 @@ function prognoza(s: Stanje): Sirovo {
     `;
   }
 
+  const kisa = kisaZaPrikaz(s.radar, Date.now());
   return html`
     ${s.zastarjelo && s.spremljeno
       ? html`<p class="napomena" role="status">${osvjezenoRecenica(s.spremljeno)}</p>`
       : ''}
     ${prikaziSada(p, jadranskiKraj(s.mjesto.lat, s.mjesto.lon), s.zrak ? zrakSad(s.zrak, p.sada.vrijeme) : null)}
-    ${prikaziVes(p)}
+    ${kisa ? prikaziKisuSad(kisa) : ''}
+    ${prikaziVes(p, kisa?.kisa ?? null)}
     <div class="podloga prognoza">${prikaziSate(p)} ${prikaziDane(p)}</div>
   `;
 }
@@ -193,7 +196,8 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
         <span>
           Podaci:
           <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>,
-          ICON-2I, CAMS${APLIKACIJA
+          ICON-2I, CAMS,
+          <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a>${APLIKACIJA
             ? html`, <a href="https://meteoalarm.org/" target="_blank" rel="noopener">MeteoAlarm</a>`
             : ''}
         </span>
@@ -244,7 +248,8 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
       prije.prognoza !== s.prognoza ||
       prije.status !== s.status ||
       prije.zastarjelo !== s.zastarjelo ||
-      prije.zrak !== s.zrak;
+      prije.zrak !== s.zrak ||
+      prije.radar !== s.radar;
     if (promijenjenaPrognoza) {
       prognozaEl.innerHTML = prognoza(s).html;
       const p = zaPrikaz(s);

@@ -1,3 +1,4 @@
+import { vesPremaRadaru, type KisaSad } from '../logic/kisaSad';
 import { satIz } from '../logic/vrijeme';
 import { pregledVesa, procijeniVes, type DanPregled, type VesPresuda } from '../logic/ves';
 import { danKratko, vesCinjenice, vesOcjenaKratko, vesRecenica } from '../tekst';
@@ -58,11 +59,13 @@ function trakaPresude(p: Prognoza, v: VesPresuda): Sirovo {
   });
 }
 
-export function prikaziVes(p: Prognoza): Sirovo {
+export function prikaziVes(p: Prognoza, kisa: KisaSad | null = null): Sirovo {
   const v = procijeniVes(p);
   const r = vesRecenica(v);
+  // Radar vidi kišu u narednom satu: to je preče od satne prognoze.
+  const radar = vesPremaRadaru(v, kisa);
   return html`
-    <section class="staklo kartica ves" data-nivo="${v.nivo}" aria-labelledby="ves-naslov">
+    <section class="staklo kartica ves" data-nivo="${radar ? 'pazi' : v.nivo}" aria-labelledby="ves-naslov">
       <div class="kartica__vrh">
         <span class="kartica__znak">${ikonaUi('majica')}</span>
         <h2 class="kartica__naslov" id="ves-naslov">Veš</h2>
@@ -70,7 +73,7 @@ export function prikaziVes(p: Prognoza): Sirovo {
           ${ikonaUi('strelica')}
         </button>
       </div>
-      <p class="kartica__glavno">${r.glavno}</p>
+      <p class="kartica__glavno">${radar ?? r.glavno}</p>
       ${trakaPresude(p, v)}
       <p class="kartica__detalj">${r.detalj}</p>
     </section>

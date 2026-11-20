@@ -555,3 +555,82 @@ button.grad:active {
   font-size: 0.8125rem;
   color: var(--tekst-tihi);
 }
+
+/* --- Kiša u naredna 2 sata (radar) --- */
+
+.kisa-sad {
+  margin-top: 22px;
+  padding: 14px 18px 14px;
+}
+
+.kisa-sad__recenica {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-wrap: pretty;
+}
+
+.kisa-sad__znak {
+  flex: none;
+  color: var(--kisa);
+  font-size: 16px;
+  transform: translateY(2px);
+}
+
+.kisa-sad[data-vrsta='suho'] .kisa-sad__recenica {
+  font-weight: 500;
+  font-size: 0.9375rem;
+}
+
+.kisa-sad[data-vrsta='suho'] .kisa-sad__znak {
+  opacity: 0.5;
+}
+
+.kisa-sad__traka {
+  margin-top: 14px;
+}
+
+/* Stupci po 5 minuta, poravnati dolje: visina je jačina, providnost sigurnost. */
+.kisa-sad__stupci {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 16px;
+}
+
+.kisa-sad__stupci i {
+  flex: 1;
+  border-radius: 2px 2px 1px 1px;
+  background: var(--kisa);
+}
+
+.kisa-sad__stupci i.je-snijeg {
+  background: #fff;
+}
+
+.kisa-sad__stupci i.je-suho {
+  height: 2px;
+  background: rgb(255 255 255 / 0.28);
+}
+
+.kisa-sad__oznake {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--tekst-tihi);
+}
+
+/* Kraj trake koji stari radar više ne pokriva. */
+.kisa-sad__stupci i.je-nepoznato {
+  height: 2px;
+  background: none;
+}
+
+.kisa-sad__stupci i.je-moguce {
+  height: 3px;
+  background: rgb(179 219 255 / 0.4);
+}

@@ -6,6 +6,7 @@ import {
   ucitajPrognozu,
 } from './api/cache';
 import { GreskaPrognoze, dohvatiPrognoze, dohvatiPrognozu } from './api/openMeteo';
+import { dohvatiRadar, type Radar } from './api/radar';
 import { dohvatiZrak } from './api/zrak';
 import type { Zrak } from './logic/zrak';
 import { GRADOVI } from './config';
@@ -33,6 +34,8 @@ export interface Stanje {
   gradovi: StanjeGradova;
   /** Kvalitet zraka za mjesto; null dok ne stigne ili ako ga nema. */
   zrak: Zrak | null;
+  /** Kiša u naredna 2 sata s radara; null dok ne stigne, van pokrivenosti ili bez mreže. */
+  radar: Radar | null;
 }
 
 type Pretplatnik = (s: Stanje) => void;
@@ -57,6 +60,7 @@ export function stvoriSkladiste(pocetnoMjesto: Mjesto): Skladiste {
     greska: null,
     gradovi: { status: 'ucitava', prognoze: ucitajGradove(GRADOVI.length) ?? [] },
     zrak: null,
+    radar: null,
   };
   const pretplatnici = new Set<Pretplatnik>();
   let zahtjev: AbortController | null = null;
@@ -79,9 +83,13 @@ export function stvoriSkladiste(pocetnoMjesto: Mjesto): Skladiste {
     void dohvatiZrak(mjesto, moj.signal).then((zrak) => {
       if (!moj.signal.aborted && zrak) postavi({ zrak });
     });
+    // Radar isto. Ako ne stigne, ostaje zadnji za isto mjesto (app.ts ga ne prikaže kad je prestar).
+    void dohvatiRadar(mjesto, moj.signal).then((radar) => {
+      if (!moj.signal.aborted && radar) postavi({ radar });
+    });
     postavi({
       mjesto,
-      ...(istoMjesto ? {} : { zrak: null }),
+      ...(istoMjesto ? {} : { zrak: null, radar: null }),
       prognoza: staro?.prognoza ?? null,
       spremljeno: staro?.spremljeno ?? null,
       status: staro ? 'spremno' : 'ucitava',
