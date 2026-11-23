@@ -36,7 +36,7 @@ export function pokreniAndroid(app: Aplikacija): void {
     stanje: () => citajStanje(),
     provjeri: () => azuriraj(app, true),
   });
-  if (Capacitor.isPluginAvailable('BackgroundRunner')) app.postaviObavijesti(obavijesti);
+  if (Capacitor.isPluginAvailable(DODATAK_OBAVIJESTI)) app.postaviObavijesti(obavijesti);
   void azuriraj(app);
   void izmjeri(app);
   void upozori(app);
@@ -57,6 +57,8 @@ export function pokreniAndroid(app: Aplikacija): void {
  * i kad je aplikacija zatvorena; ovdje joj se samo javi mjesto i da li je uključena.
  */
 const RUNNER = 'io.github.cooksaa.hava.provjera';
+/** Ime pod kojim se dodatak registruje (registerPlugin u @capacitor/background-runner), ne ime u kodu. */
+export const DODATAK_OBAVIJESTI = 'CapacitorBackgroundRunner';
 const KLJUC_OBAVIJESTI = 'obavijesti:v1';
 
 function citajObavijesti(): StanjeObavijesti {

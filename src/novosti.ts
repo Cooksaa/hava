@@ -7,6 +7,10 @@ import type { Novost } from './logic/novosti';
  */
 export const NOVOSTI: Novost[] = [
   {
+    verzija: '0.6.1',
+    stavke: ['Popravljeno: kartica za uključivanje obavijesti se sad pokazuje pri dnu ekrana.'],
+  },
+  {
     verzija: '0.6.0',
     stavke: [
       'Radar na mapi: dugme gore, pored lupe, ili dodir na traku s kišom. Zadnji sat i sat unaprijed.',
