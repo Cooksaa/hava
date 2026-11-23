@@ -6,6 +6,7 @@ import './styles/staklo.css';
 import './styles/komponente.css';
 import './styles/kartice.css';
 import './styles/stanja.css';
+import './styles/mapa.css';
 
 import { ucitajMjesto } from './api/cache';
 import { POCETNO_MJESTO } from './config';
@@ -21,6 +22,8 @@ const skladiste = stvoriSkladiste(mjesto);
 
 ubaciIkone();
 const app = pokreniApp(korijen, skladiste);
+// Samo za razvoj: da se Android dijelovi (obavijesti, ažuriranje) mogu probati u pregledniku.
+if (import.meta.env.DEV) (window as unknown as { __app: typeof app }).__app = app;
 void skladiste.ucitaj(mjesto);
 void skladiste.ucitajGradove();
 

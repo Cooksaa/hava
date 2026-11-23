@@ -634,3 +634,78 @@ button.grad:active {
   height: 3px;
   background: rgb(179 219 255 / 0.4);
 }
+
+/* Cijela traka otvara radar na mapi (dugme se razvuče preko nje). */
+.kisa-sad {
+  position: relative;
+  transition: transform var(--brzo) ease-out;
+}
+
+.kisa-sad:has(.kisa-sad__otvori:active) {
+  transform: scale(0.985);
+}
+
+.kisa-sad__red {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.kisa-sad__red .kisa-sad__recenica {
+  flex: 1;
+}
+
+.kisa-sad__otvori {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin: -3px -6px 0 0;
+  color: var(--tekst-tihi);
+  font-size: 16px;
+}
+
+.kisa-sad__otvori::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.kisa-sad__otvori:focus-visible {
+  outline: none;
+}
+
+.kisa-sad:has(.kisa-sad__otvori:focus-visible) {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* --- Poziv za obavijesti (Android), pri dnu, dok korisnik ne izabere --- */
+
+.obavijesti-poziv__glavno {
+  margin-top: 12px;
+  font-size: 1.125rem;
+  line-height: 1.25;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+.obavijesti-poziv__dugmad {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.obavijesti-poziv__dugmad .dugme {
+  margin-top: 0;
+}
+
+.obavijesti-poziv__ne {
+  min-height: 44px;
+  padding: 0 14px;
+  color: var(--tekst-tihi);
+  font-weight: 600;
+}

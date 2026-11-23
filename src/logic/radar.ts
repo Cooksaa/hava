@@ -73,3 +73,21 @@ export function upisi(polje: Polje, rgba: Uint8ClampedArray | Uint8Array, sirina
     }
   }
 }
+
+/** mm/h → dBZ (obrnuto od mmh). */
+export const dbz = (mmhVal: number): number => 10 * Math.log10(200 * mmhVal ** 1.6);
+
+/**
+ * Boja za crtanje kiše (iste boje kao RainViewer, da se naša prognoza na mapi
+ * ne razlikuje od snimaka): [r, g, b] ili null kad nema kiše.
+ */
+export function bojaKise(mmhVal: number, snijeg: boolean): [number, number, number] | null {
+  if (!(mmhVal > 0)) return null;
+  const d = dbz(mmhVal);
+  const t = snijeg ? SNIJEG : KISA;
+  let boja = t[0]!;
+  for (let i = 0; i < t.length; i += 2) {
+    if (t[i + 1]! <= d + 0.5) boja = t[i]!;
+  }
+  return [(boja >> 16) & 255, (boja >> 8) & 255, boja & 255];
+}

@@ -1,3 +1,5 @@
+import { lokalno } from './sarajevo';
+
 /*
  * Službena upozorenja FHMZ BiH i RHMZ RS, preko MeteoAlarma (CC BY 4.0).
  *
@@ -90,8 +92,8 @@ const VRSTE: Record<number, string> = {
 const param = (i: CapInfo, ime: string): string | undefined => i.parameter?.find((p) => p.valueName === ime)?.value;
 const vrijeme = (s: string | undefined): number => (s ? Date.parse(s) : NaN);
 
-/** Lokalni datum (Sarajevo) početka, za grupisanje po danu. */
-const danPocetka = (ms: number): string => new Date(ms).toLocaleDateString('sv-SE', { timeZone: 'Europe/Sarajevo' });
+/** Lokalni datum (Sarajevo) početka, za grupisanje po danu. Bez Intl-a: radi i u pozadini. */
+const danPocetka = (ms: number): string => lokalno(ms).datum;
 
 /** Sirovi feed → upozorenja za regiju koja još traju ili tek dolaze, najozbiljnija prva. */
 export function upozorenjaZa(zapisi: MaZapis[], regija: string, sad: number): Upozorenje[] {
@@ -143,9 +145,8 @@ const BOJA: Record<Nivo, string> = { 2: 'Žuto', 3: 'Narandžasto', 4: 'Crveno' 
 export const nivoIme = (n: Nivo): string => BOJA[n];
 
 function sat(ms: number): { dan: string; sat: number; minut: number } {
-  const d = new Date(ms);
-  const dio = (o: Intl.DateTimeFormatOptions): string => d.toLocaleString('sv-SE', { timeZone: 'Europe/Sarajevo', ...o });
-  return { dan: dio({ year: 'numeric', month: '2-digit', day: '2-digit' }), sat: Number(dio({ hour: '2-digit', hour12: false })), minut: Number(dio({ minute: '2-digit' })) };
+  const l = lokalno(ms);
+  return { dan: l.datum, sat: l.sat, minut: l.minut };
 }
 
 /** "danas od 12h do ponoći", "sutra cijeli dan", "traje do 20h". */

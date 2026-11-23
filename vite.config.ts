@@ -55,6 +55,8 @@ export default defineConfig(({ mode }) => {
           // Prognozu čuva api/cache.ts u localStorage, uz vrijeme kad je dohvaćena:
           // da je čuva i service worker, imali bismo dvije stare kopije koje se ne slažu.
           globPatterns: ['**/*.{js,css,html,woff2,png,svg,ico}'],
+          // Mapa radara (~1,6 MB) se skida tek kad se radar otvori, ne pri prvoj posjeti.
+          globIgnores: ['**/maplibre-gl*'],
           cleanupOutdatedCaches: true,
           navigateFallback: 'index.html',
         },

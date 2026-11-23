@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { kisaUKrugu, kretanje, odSad, prognozaTacke } from './nowcast';
-import { mmh, prazno, upisi, type Polje } from './radar';
+import { bojaKise, mmh, prazno, upisi, type Polje } from './radar';
 
 const N = 160;
 
@@ -99,5 +99,13 @@ describe('odSad', () => {
     const k = [0, 5, 10, 15].map((min) => ({ min, vjer: min / 100, mmh: 0, snijeg: false }));
     expect(odSad(k, 7).map((x) => [x.min, x.vjer])).toEqual([[0, 0.05], [5, 0.1], [10, 0.15]]);
     expect(odSad(k, 0)).toHaveLength(4);
+  });
+});
+
+describe('bojaKise', () => {
+  it('vraća boju iz tabele, obrnuto od čitanja', () => {
+    expect(bojaKise(mmh(20), false)).toEqual([0x00, 0xa3, 0xe0]);
+    expect(bojaKise(mmh(30), true)).toEqual([0x4f, 0x8f, 0xff]);
+    expect(bojaKise(0, false)).toBeNull();
   });
 });

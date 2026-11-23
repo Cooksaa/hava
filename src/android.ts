@@ -1,11 +1,13 @@
 import { App } from '@capacitor/app';
-import { CapacitorHttp } from '@capacitor/core';
+import { BackgroundRunner } from '@capacitor/background-runner';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { citajStanje, dohvatiIzdanje, pisiStanje, type Zapamceno } from './api/azuriranje';
 import { odlukaAzuriranja } from './logic/azuriranje';
 import { AERODROMI, zadnjaMjerenja, type MetarZapis } from './logic/mjerenje';
 import type { MaZapis } from './logic/upozorenja';
-import type { Aplikacija } from './ui/app';
+import type { Mjesto } from './tipovi';
+import type { Aplikacija, Obavijesti, StanjeObavijesti } from './ui/app';
 
 /*
  * Samo u Android aplikaciji (učitava se iz main.ts kad je build za Android).
@@ -34,6 +36,7 @@ export function pokreniAndroid(app: Aplikacija): void {
     stanje: () => citajStanje(),
     provjeri: () => azuriraj(app, true),
   });
+  if (Capacitor.isPluginAvailable('BackgroundRunner')) app.postaviObavijesti(obavijesti);
   void azuriraj(app);
   void izmjeri(app);
   void upozori(app);
@@ -48,6 +51,66 @@ export function pokreniAndroid(app: Aplikacija): void {
     void upozori(app);
   }, MJERI_NAKON_MS);
 }
+
+/*
+ * Obavijesti za baš jako vrijeme. Samu provjeru radi src/pozadina (Background Runner),
+ * i kad je aplikacija zatvorena; ovdje joj se samo javi mjesto i da li je uključena.
+ */
+const RUNNER = 'io.github.cooksaa.hava.provjera';
+const KLJUC_OBAVIJESTI = 'obavijesti:v1';
+
+function citajObavijesti(): StanjeObavijesti {
+  try {
+    const s = localStorage.getItem(KLJUC_OBAVIJESTI);
+    return s === 'ukljuceno' || s === 'iskljuceno' || s === 'odbijeno' ? s : 'nije-birano';
+  } catch {
+    return 'nije-birano';
+  }
+}
+
+function pisiObavijesti(s: StanjeObavijesti): void {
+  try {
+    localStorage.setItem(KLJUC_OBAVIJESTI, s);
+  } catch {
+    /* ostaje za ovu sesiju */
+  }
+}
+
+function javiPozadini(m: Mjesto, ukljuceno: boolean): void {
+  void BackgroundRunner.dispatchEvent({
+    label: RUNNER,
+    event: 'postavi',
+    details: { ukljuceno, ime: m.ime, lat: m.lat, lon: m.lon, bih: m.bih !== false },
+  }).catch(() => {
+    /* runner nije spreman: javi se opet pri sljedećoj promjeni ili otvaranju */
+  });
+}
+
+const obavijesti: Obavijesti = {
+  stanje: citajObavijesti,
+  async ukljuci(m) {
+    try {
+      const d = await BackgroundRunner.requestPermissions({ apis: ['notifications'] });
+      if (d.notifications !== 'granted') {
+        pisiObavijesti('odbijeno');
+        return 'odbijeno';
+      }
+    } catch {
+      pisiObavijesti('odbijeno');
+      return 'odbijeno';
+    }
+    pisiObavijesti('ukljuceno');
+    javiPozadini(m, true);
+    return 'ukljuceno';
+  },
+  iskljuci(m) {
+    pisiObavijesti('iskljuceno');
+    javiPozadini(m, false);
+  },
+  mjesto(m) {
+    if (citajObavijesti() === 'ukljuceno') javiPozadini(m, true);
+  },
+};
 
 /*
  * Mjerenja s aerodroma (METAR, aviationweather.gov, javni podaci). Njihov server ne

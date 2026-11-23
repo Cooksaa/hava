@@ -1,4 +1,4 @@
-import { kisaUKrugu, kretanje, prognozaTacke, type Korak } from '../logic/nowcast';
+import { kisaUKrugu, kretanje, prognozaTacke, type Korak, type Kretanje } from '../logic/nowcast';
 import { prazno, upisi, type Polje } from '../logic/radar';
 import type { Mjesto } from '../tipovi';
 
@@ -29,13 +29,40 @@ export interface Radar {
   blizu: boolean;
   /** Kad je izračunato, ms (koraci počinju tada). */
   izracunato: number;
+  /** Za mapu: zadnji snimak oko mjesta i kuda se kiša kreće. */
+  polje: Polje;
+  kretanje: Kretanje | null;
+  /** Gornji lijevi ugao polja u pikselima svijeta na zoomu `zoom`. */
+  x0: number;
+  y0: number;
+  zoom: number;
+}
+
+/** Okviri (snimci) za mapu: zadnji sat, najstariji prvi. */
+export async function okviriZaMapu(): Promise<{ host: string; okviri: Okvir[] } | null> {
+  try {
+    const { host, okviri } = await dajMape();
+    const zadnji = okviri[okviri.length - 1];
+    if (!zadnji) return null;
+    return { host, okviri: okviri.filter((o) => zadnji.time - o.time <= 60 * 60) };
+  } catch {
+    return null;
+  }
+}
+
+/** Piksel svijeta (Web Mercator, zoom z) → [lon, lat]. */
+export function lonLat(x: number, y: number, z = Z): [number, number] {
+  const n = SLIKA * 2 ** z;
+  const lon = (x / n) * 360 - 180;
+  const lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / n))) * 180) / Math.PI;
+  return [lon, lat];
 }
 
 /** Radar pokriva Evropu, ali račun i provjeru smo radili za naš kraj. */
 export const imaRadar = (m: Pick<Mjesto, 'lat' | 'lon'>): boolean =>
   m.lat > 41 && m.lat < 47.5 && m.lon > 13 && m.lon < 23.5;
 
-interface Okvir {
+export interface Okvir {
   time: number;
   path: string;
 }
@@ -142,6 +169,11 @@ export async function dohvatiRadar(m: Mjesto, signal?: AbortSignal): Promise<Rad
       snimak: zadnji.time * 1000,
       blizu: kisaUKrugu(novo, R, R, 100, kmPoPikselu),
       izracunato: Date.now(),
+      polje: novo,
+      kretanje: k,
+      x0,
+      y0,
+      zoom: Z,
     };
   } catch {
     return null;

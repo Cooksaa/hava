@@ -8,7 +8,7 @@ import { jadranskiKraj } from '../logic/vjetar';
 import { zrakSad } from '../logic/zrak';
 import type { Skladiste, Stanje, StanjeGradova } from '../state';
 import { greskaRecenica, osvjezenoRecenica, stepeni } from '../tekst';
-import type { Prognoza } from '../tipovi';
+import type { Mjesto, Prognoza } from '../tipovi';
 import { stvoriAtmosferu } from './atmosfera';
 import { prikaziDane } from './dani';
 import { html, type Sirovo } from './html';
@@ -24,6 +24,7 @@ import { prikaziSate } from './sati';
 import { prikaziUpozorenja, upozorenjaDetalji } from './upozorenja';
 import { prikaziVes, prikaziVesDetalje } from './ves';
 import { kisaZaPrikaz, prikaziKisuSad } from './kisaSad';
+import { stvoriRadarMapu } from './radarMapa';
 
 /* Sastavlja ekran i ponovo iscrta samo dio čije se stanje promijenilo. */
 
@@ -141,6 +142,77 @@ export interface Aplikacija {
   postaviMjerenja(m: Mjerenje[]): void;
   postaviUpozorenja(z: MaZapis[]): void;
   postaviAzuriranje(a: Azuriranje): void;
+  postaviObavijesti(o: Obavijesti): void;
+}
+
+export type StanjeObavijesti = 'nije-birano' | 'ukljuceno' | 'iskljuceno' | 'odbijeno';
+
+/** Android: obavijesti za baš jako vrijeme (android.ts, src/pozadina). */
+export interface Obavijesti {
+  stanje(): StanjeObavijesti;
+  ukljuci(m: Mjesto): Promise<'ukljuceno' | 'odbijeno'>;
+  iskljuci(m: Mjesto): void;
+  /** Mjesto se promijenilo: provjera u pozadini gleda novo. */
+  mjesto(m: Mjesto): void;
+}
+
+/** Kartica pri dnu dok korisnik nije izabrao; poslije se obavijesti mijenjaju u "Hava X.Y" listu. */
+function obavijestiPoziv(stanje: StanjeObavijesti, mjesto: string): Sirovo {
+  if (stanje === 'nije-birano') {
+    return html`
+      <section class="podloga kartica obavijesti-poziv" aria-labelledby="obavijesti-naslov">
+        <div class="kartica__vrh">
+          <span class="kartica__znak">${ikonaUi('zvono')}</span>
+          <h2 class="kartica__naslov" id="obavijesti-naslov">Obavijesti</h2>
+        </div>
+        <p class="obavijesti-poziv__glavno">Javi kad dolazi baš jaka kiša ili vjetar</p>
+        <p class="kartica__detalj">Za mjesto ${mjesto}, i kad je aplikacija zatvorena. Samo kad je ozbiljno, ne svaki dan.</p>
+        <div class="obavijesti-poziv__dugmad">
+          <button class="dugme" type="button" data-akcija="obavijesti-ukljuci">Uključi</button>
+          <button class="obavijesti-poziv__ne" type="button" data-akcija="obavijesti-ne">Ne sad</button>
+        </div>
+      </section>
+    `;
+  }
+  if (stanje === 'odbijeno') {
+    return html`
+      <section class="podloga kartica obavijesti-poziv" aria-labelledby="obavijesti-naslov">
+        <div class="kartica__vrh">
+          <span class="kartica__znak">${ikonaUi('zvono')}</span>
+          <h2 class="kartica__naslov" id="obavijesti-naslov">Obavijesti su blokirane</h2>
+        </div>
+        <p class="kartica__detalj">Android ih ne pušta. Uključi ih u postavkama telefona: Aplikacije → Hava → Obavijesti, pa ovdje ponovo.</p>
+        <div class="obavijesti-poziv__dugmad">
+          <button class="dugme" type="button" data-akcija="obavijesti-ukljuci">Pokušaj ponovo</button>
+          <button class="obavijesti-poziv__ne" type="button" data-akcija="obavijesti-ne">Ne treba</button>
+        </div>
+      </section>
+    `;
+  }
+  return html``;
+}
+
+function obavijestiDetalji(mjesto: string, ukljuceno: boolean): Sirovo {
+  if (!ukljuceno) {
+    return html`
+      <p class="list__glavno">Obavijesti su isključene.</p>
+      <p class="list__detalj">Uključi ih da ti Hava javi za baš jaku kišu i vjetar, i kad je zatvorena.</p>
+      <button class="dugme" type="button" data-obavijesti="ukljuci">${ikonaUi('zvono')}<span>Uključi</span></button>
+    `;
+  }
+  return html`
+    <p class="list__glavno">Uključeno za mjesto ${mjesto}.</p>
+    <p class="list__detalj">
+      Javimo se kad zavod izda narandžasto ili crveno upozorenje, i kad model vidi udare vjetra od 75 km/h ili
+      jaku kišu u narednih 12 sati. Noću samo službena upozorenja.
+    </p>
+    <h3 class="list__podnaslov">Na Xiaomi i Redmi telefonima</h3>
+    <p class="list__detalj">
+      Da provjera radi i kad je Hava zatvorena: Postavke → Aplikacije → Hava → Autostart uključi, a Ušteda baterije
+      stavi na „Bez ograničenja“. Inače telefon ugasi provjeru da štedi bateriju.
+    </p>
+    <button class="dugme" type="button" data-obavijesti="iskljuci">Isključi obavijesti</button>
+  `;
 }
 
 /** Android: stanje ažuriranja i ručna provjera (android.ts). */
@@ -167,6 +239,9 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
     <div class="ekran">
       <header class="vrh">
         <h1 class="mjesto" data-dio="mjesto"></h1>
+        <button class="okruglo vrh__radar" type="button" data-akcija="radar" aria-label="Radar" aria-haspopup="dialog">
+          ${ikonaUi('mapa')}
+        </button>
         <button
           class="okruglo"
           type="button"
@@ -186,6 +261,7 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
           ${prikaziDron()}
         </div>
       </main>
+      <div data-dio="obavijesti"></div>
       <div data-dio="azuriranje"></div>
       <footer class="izvor">
         ${APLIKACIJA
@@ -224,7 +300,9 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
   };
 
   const list = stvoriList();
+  const radarMapa = stvoriRadarMapu();
   let azuriranje: Azuriranje | null = null;
+  let obavijesti: Obavijesti | null = null;
   pokaziNovosti(dio('novo'), list);
   const pretraga = stvoriPretragu((m) => {
     window.scrollTo({ top: 0 });
@@ -238,8 +316,16 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
   const ekranEl = korijen.querySelector('.ekran') as HTMLElement;
   const mirno = matchMedia('(prefers-reduced-motion: reduce)');
 
+  const iscrtajObavijesti = (): void => {
+    dio('obavijesti').innerHTML = obavijesti ? obavijestiPoziv(obavijesti.stanje(), skladiste.daj().mjesto.ime).html : '';
+  };
+
   const iscrtaj = (s: Stanje): void => {
     mjestoEl.textContent = s.mjesto.ime;
+    if (prije?.mjesto !== s.mjesto) {
+      obavijesti?.mjesto(s.mjesto);
+      iscrtajObavijesti();
+    }
     iscrtajUpozorenja(s);
 
     // Gradovi stižu poslije prognoze: bez ovoga bi lista sati skočila na početak.
@@ -319,8 +405,63 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
         if (grad && p) list.otvori(grad.ime, prikaziGradDetalje(grad, p));
         break;
       }
+      case 'radar':
+        radarMapa.otvori(s.mjesto, s.radar);
+        break;
       case 'verzija':
-        if (azuriranje) list.otvori(`Hava ${__VERSIJA__}`, azuriranjeDetalji(azuriranje));
+        if (azuriranje) list.otvori(`Hava ${__VERSIJA__}`, verzijaDetalji());
+        break;
+      case 'obavijesti-ukljuci':
+        void ukljuciObavijesti();
+        break;
+      case 'obavijesti-ne':
+        obavijesti?.iskljuci(s.mjesto);
+        iscrtajObavijesti();
+        break;
+    }
+  });
+
+  /** "Hava X.Y" list: ažuriranje, pa obavijesti. */
+  const verzijaDetalji = (): Sirovo => {
+    const o = obavijesti;
+    return html`
+      ${azuriranje ? azuriranjeDetalji(azuriranje) : ''}
+      ${o
+        ? html`<h3 class="list__podnaslov">Obavijesti</h3>
+            <p class="list__detalj">
+              ${o.stanje() === 'ukljuceno' ? `Uključene za mjesto ${skladiste.daj().mjesto.ime}.` : 'Isključene.'}
+            </p>
+            <button class="dugme" type="button" data-obavijesti="${o.stanje() === 'ukljuceno' ? 'detalji' : 'ukljuci'}">
+              ${o.stanje() === 'ukljuceno' ? 'Više o obavijestima' : 'Uključi obavijesti'}
+            </button>`
+        : ''}
+    `;
+  };
+
+  async function ukljuciObavijesti(): Promise<void> {
+    if (!obavijesti) return;
+    const m = skladiste.daj().mjesto;
+    const ishod = await obavijesti.ukljuci(m);
+    iscrtajObavijesti();
+    if (ishod === 'ukljuceno') list.otvori('Obavijesti', obavijestiDetalji(m.ime, true));
+  }
+
+  // Dugmad za obavijesti u listu (list nije unutar korijena).
+  document.addEventListener('click', (e) => {
+    const dugme = (e.target as Element).closest<HTMLButtonElement>('[data-obavijesti]');
+    if (!dugme || !obavijesti) return;
+    const m = skladiste.daj().mjesto;
+    switch (dugme.dataset.obavijesti) {
+      case 'ukljuci':
+        void ukljuciObavijesti();
+        break;
+      case 'iskljuci':
+        obavijesti.iskljuci(m);
+        iscrtajObavijesti();
+        list.otvori('Obavijesti', obavijestiDetalji(m.ime, false));
+        break;
+      case 'detalji':
+        list.otvori('Obavijesti', obavijestiDetalji(m.ime, true));
         break;
     }
   });
@@ -335,7 +476,7 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
     dugme.querySelector('span')!.textContent = 'Provjeravam';
     const cekaj = new Promise((r) => setTimeout(r, NAJMANJE_PROVJERAVA_MS));
     void Promise.all([a.provjeri(), cekaj]).finally(() => {
-      if (dugme.isConnected) list.otvori(`Hava ${__VERSIJA__}`, azuriranjeDetalji(a));
+      if (dugme.isConnected) list.otvori(`Hava ${__VERSIJA__}`, verzijaDetalji());
     });
   });
 
@@ -372,6 +513,11 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
     },
     postaviAzuriranje(a: Azuriranje) {
       azuriranje = a;
+    },
+    postaviObavijesti(o: Obavijesti) {
+      obavijesti = o;
+      o.mjesto(skladiste.daj().mjesto);
+      iscrtajObavijesti();
     },
     // Android, kad treba novi APK: tiha linija na dnu. Bez pop-upa.
     pokaziNovuVerziju(verzija: string, link: string) {

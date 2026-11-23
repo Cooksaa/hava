@@ -53,9 +53,12 @@ export function prikaziKisuSad(p: { kisa: KisaSad; koraci: Korak[] }): Sirovo {
   const { kisa, koraci } = p;
   return html`
     <section class="podloga kisa-sad" data-vrsta="${kisa.vrsta}" aria-label="Kiša u naredna 2 sata">
-      <p class="kisa-sad__recenica">
-        <span class="kisa-sad__znak">${ikonaUi('kap')}</span>${kisa.recenica}
-      </p>
+      <div class="kisa-sad__red">
+        <p class="kisa-sad__recenica"><span class="kisa-sad__znak">${ikonaUi('kap')}</span>${kisa.recenica}</p>
+        <button class="kisa-sad__otvori" type="button" data-akcija="radar" aria-label="Radar na mapi" aria-haspopup="dialog">
+          ${ikonaUi('strelica')}
+        </button>
+      </div>
       ${kisa.vrsta === 'suho' ? '' : traka(koraci)}
     </section>
   `;

@@ -27,6 +27,16 @@ const config: CapacitorConfig = {
     // Ažuriranje web dijela bez novog APK-a (src/android.ts). Sami biramo kad i šta:
     // paket dolazi s GitHub izdanja. Prazne adrese = nikakvi upiti ni statistika
     // prema Capgo serverima.
+    // Provjera u pozadini za obavijesti (src/pozadina, gradi se u dist/runners).
+    // Android je pokreće otprilike svakih 15 minuta, i kad je aplikacija zatvorena.
+    BackgroundRunner: {
+      label: 'io.github.cooksaa.hava.provjera',
+      src: 'runners/pozadina.js',
+      event: 'provjeri',
+      repeat: true,
+      interval: 15,
+      autoStart: true,
+    },
     CapacitorUpdater: {
       autoUpdate: 'off',
       updateUrl: '',

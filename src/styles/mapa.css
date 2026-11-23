@@ -1,0 +1,124 @@
+/* --- Radar na mapi (ui/radarMapa.ts) --- */
+
+dialog.mapa {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #0b1524;
+  color: var(--tekst);
+}
+
+dialog.mapa::backdrop {
+  background: #0b1524;
+}
+
+/* Jače od MapLibre-ovog .maplibregl-map { position: relative }, koji se učita poslije. */
+dialog.mapa .mapa__karta {
+  position: absolute;
+  inset: 0;
+}
+
+.mapa__vrh {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(var(--rub), env(safe-area-inset-left));
+  right: max(var(--rub), env(safe-area-inset-right));
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.mapa__vrh > * {
+  pointer-events: auto;
+}
+
+/* Vrijeme snimka: veliko, jer je to jedino što se mijenja. */
+.mapa__vrijeme {
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  padding: 10px 16px 11px;
+  border-radius: 18px;
+}
+
+.mapa__vrijeme strong {
+  font-size: 1.5rem;
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.mapa__vrijeme span {
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  color: var(--tekst-tihi);
+}
+
+/* Prognoza (ne snimak): mala tačka u boji, da se ne miješa sa stvarnim radarom. */
+dialog.mapa[data-buduce='true'] .mapa__vrijeme span::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--pazi);
+  transform: translateY(-1px);
+}
+
+.mapa__dugme {
+  background: rgb(var(--staklo-rgb) / var(--staklo-a));
+}
+
+.mapa__dno {
+  position: absolute;
+  left: max(var(--rub), env(safe-area-inset-left));
+  right: max(var(--rub), env(safe-area-inset-right));
+  /* Ispod ostaje red za izvore mape (OpenStreetMap, RainViewer). */
+  bottom: calc(34px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px 8px 10px;
+  border-radius: 22px;
+}
+
+.mapa__vremenska {
+  flex: 1;
+  min-width: 0;
+}
+
+.mapa__klizac {
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  accent-color: #fff;
+  background: transparent;
+}
+
+.mapa__oznake {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--tekst-tihi);
+}
+
+/* Izvori mape: sitno, u boji aplikacije. */
+dialog.mapa .maplibregl-ctrl-attrib {
+  background: rgb(11 21 36 / 0.7);
+  color: var(--tekst-tihi);
+}
+
+dialog.mapa .maplibregl-ctrl-attrib a {
+  color: inherit;
+}
+
+dialog.mapa .maplibregl-ctrl-attrib-button {
+  filter: invert(1);
+}
