@@ -48,6 +48,8 @@ export interface Skladiste {
   /** Ponovo dohvati za trenutno mjesto, i gradove. */
   osvjezi(): Promise<void>;
   ucitajGradove(): Promise<void>;
+  /** Samo radar za trenutno mjesto (svakih 5 min, main.ts). */
+  osvjeziRadar(): Promise<void>;
 }
 
 export function stvoriSkladiste(pocetnoMjesto: Mjesto): Skladiste {
@@ -136,5 +138,11 @@ export function stvoriSkladiste(pocetnoMjesto: Mjesto): Skladiste {
       await Promise.all([ucitaj(stanje.mjesto), gradovi()]);
     },
     ucitajGradove: gradovi,
+    async osvjeziRadar() {
+      const m = stanje.mjesto;
+      const radar = await dohvatiRadar(m);
+      // U međuvremenu promijenjeno mjesto: ovaj radar više ne važi.
+      if (radar && m === stanje.mjesto) postavi({ radar });
+    },
   };
 }

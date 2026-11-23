@@ -31,22 +31,29 @@ if (import.meta.env.MODE === 'android') {
 
 /*
  * Osvježavanje. App na mobitelu često ostane otvoren satima, pa:
- *  - kad se vrati u prvi plan, povuci novu prognozu ako je stara starija od 10 minuta
+ *  - kad se vrati u prvi plan, povuci šta je zastarjelo
  *  - kad se vrati internet, povuci odmah
- *  - dok je otvoren, provjeri svakih 10 minuta
+ *  - dok je otvoren, provjeri svakih 5 minuta
+ * Radar ima novi snimak svakih 10 min, pa ga gledamo svakih 5 (kasni najviše 5 min).
+ * Modeli se mijenjaju najviše jednom na sat: za njih je 10 min i više nego dovoljno.
  * Ako mreže nema, prikaz se ipak ponovo izračuna, da "Sad" ne ostane na starom satu.
  */
 const OSVJEZI_NAKON_MS = 10 * 60 * 1000;
+const RADAR_NAKON_MS = 5 * 60 * 1000;
 
 function osvjeziAkoTreba(): void {
   if (document.visibilityState !== 'visible') return;
-  const { spremljeno } = skladiste.daj();
+  const { spremljeno, radar } = skladiste.daj();
   if (!spremljeno || Date.now() - spremljeno > OSVJEZI_NAKON_MS) {
     app.osvjeziPrikaz();
     void skladiste.osvjezi();
+  } else if (!radar || Date.now() - radar.izracunato > RADAR_NAKON_MS - 10_000) {
+    // Prognoza je svježa, ali radar nije: samo radar (i ponovo izračunaj "sad").
+    app.osvjeziPrikaz();
+    void skladiste.osvjeziRadar();
   }
 }
 
 document.addEventListener('visibilitychange', osvjeziAkoTreba);
 window.addEventListener('online', () => void skladiste.osvjezi());
-setInterval(osvjeziAkoTreba, OSVJEZI_NAKON_MS);
+setInterval(osvjeziAkoTreba, RADAR_NAKON_MS);

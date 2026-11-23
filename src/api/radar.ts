@@ -41,14 +41,19 @@ interface Okvir {
 }
 
 let mape: { host: string; okviri: Okvir[]; kad: number } | null = null;
+/** Upit koji je u toku: više istovremenih poziva (pokretanje, lokacija) čeka isti. */
+let uToku: Promise<{ host: string; okviri: Okvir[] }> | null = null;
 
-async function dajMape(signal?: AbortSignal): Promise<{ host: string; okviri: Okvir[] }> {
-  if (mape && Date.now() - mape.kad < 4 * 60_000) return mape;
-  const o = await fetch(MAPE, { signal });
-  if (!o.ok) throw new Error(`radar ${o.status}`);
-  const j = (await o.json()) as { host: string; radar?: { past?: Okvir[] } };
-  mape = { host: j.host, okviri: j.radar?.past ?? [], kad: Date.now() };
-  return mape;
+function dajMape(): Promise<{ host: string; okviri: Okvir[] }> {
+  if (mape && Date.now() - mape.kad < 4 * 60_000) return Promise.resolve(mape);
+  uToku ??= (async () => {
+    const o = await fetch(MAPE);
+    if (!o.ok) throw new Error(`radar ${o.status}`);
+    const j = (await o.json()) as { host: string; radar?: { past?: Okvir[] } };
+    mape = { host: j.host, okviri: j.radar?.past ?? [], kad: Date.now() };
+    return mape;
+  })().finally(() => (uToku = null));
+  return uToku;
 }
 
 /** Slike se ne mijenjaju (svaki snimak ima svoju adresu), pa se pamte dok traje aplikacija. */
@@ -113,7 +118,7 @@ async function polje(host: string, o: Okvir, x0: number, y0: number, signal?: Ab
 export async function dohvatiRadar(m: Mjesto, signal?: AbortSignal): Promise<Radar | null> {
   if (!imaRadar(m)) return null;
   try {
-    const { host, okviri } = await dajMape(signal);
+    const { host, okviri } = await dajMape();
     const zadnji = okviri[okviri.length - 1];
     if (!zadnji) return null;
     const kasnjenje = (Date.now() - zadnji.time * 1000) / 60_000;

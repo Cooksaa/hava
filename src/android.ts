@@ -52,14 +52,17 @@ export function pokreniAndroid(app: Aplikacija): void {
 /*
  * Mjerenja s aerodroma (METAR, aviationweather.gov, javni podaci). Njihov server ne
  * dozvoljava poziv iz preglednika (CORS), pa ovo ide samo kroz Androidov HTTP.
- * Stanice šalju novo mjerenje svakih 30–60 minuta.
+ * Stanice šalju redovno mjerenje svakih 30–60 minuta, a posebno (SPECI) čim se vrijeme
+ * naglo promijeni. Odgovor je par kB, pa gledamo svakih 5 minuta dok je aplikacija otvorena.
  */
 const METAR = `https://aviationweather.gov/api/data/metar?ids=${Object.keys(AERODROMI).join(',')}&format=json&hours=2`;
-const MJERI_NAKON_MS = 10 * 60 * 1000;
+const MJERI_NAKON_MS = 5 * 60 * 1000;
+/** Interval i provjera "je li prošlo" se ne poklope u milisekundu: ovoliko popusta. */
+const POPUST_MS = 15_000;
 let izmjereno = 0;
 
 async function izmjeri(app: Aplikacija): Promise<void> {
-  if (Date.now() - izmjereno < MJERI_NAKON_MS) return;
+  if (Date.now() - izmjereno < MJERI_NAKON_MS - POPUST_MS) return;
   try {
     const odgovor = await CapacitorHttp.get({ url: METAR, connectTimeout: 10_000, readTimeout: 10_000 });
     if (odgovor.status !== 200) return;
@@ -75,14 +78,15 @@ async function izmjeri(app: Aplikacija): Promise<void> {
 /*
  * Službena upozorenja FHMZ BiH i RHMZ RS (MeteoAlarm). Ni njihov server ne dozvoljava
  * poziv iz preglednika, pa i ovo ide kroz Androidov HTTP. Zavodi ih izdaju par puta dnevno,
- * a odgovor ima ~110 kB (nekomprimovan), pa ne češće od svakih pola sata.
+ * a odgovor ima ~110 kB (nekomprimovan), pa svakih 15 minuta: novo upozorenje kasni
+ * najviše toliko, a mobilni podaci ne pate.
  */
 const UPOZORENJA = 'https://feeds.meteoalarm.org/api/v1/warnings/feeds-bosnia-herzegovina';
-const UPOZORI_NAKON_MS = 30 * 60 * 1000;
+const UPOZORI_NAKON_MS = 15 * 60 * 1000;
 let upozoreno = 0;
 
 async function upozori(app: Aplikacija): Promise<void> {
-  if (Date.now() - upozoreno < UPOZORI_NAKON_MS) return;
+  if (Date.now() - upozoreno < UPOZORI_NAKON_MS - POPUST_MS) return;
   try {
     const odgovor = await CapacitorHttp.get({ url: UPOZORENJA, connectTimeout: 10_000, readTimeout: 15_000 });
     if (odgovor.status !== 200) return;
