@@ -18,7 +18,8 @@ import { pokaziNovosti } from './novosti';
 import { postaviNebo } from './pozadina';
 import { povuciZaOsvjezi } from './povuci';
 import { stvoriPretragu } from './pretraga';
-import { prikaziDron, prikaziGradDetalje, prikaziPutujem } from './putujem';
+import { prikaziGradDetalje, prikaziPutujem } from './putujem';
+import { izaberiModel, prikaziDron, prikaziDronDetalje } from './dron';
 import { prikaziSada, prikaziSadaKostur } from './sada';
 import { prikaziSate } from './sati';
 import { prikaziUpozorenja, upozorenjaDetalji } from './upozorenja';
@@ -258,7 +259,7 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
         <div data-dio="prognoza"></div>
         <div class="podloga aktivnosti">
           <div data-dio="putujem"></div>
-          ${prikaziDron()}
+          <div data-dio="dron"></div>
         </div>
       </main>
       <div data-dio="obavijesti"></div>
@@ -369,8 +370,34 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
       putujemEl.innerHTML = prikaziPutujem(gradoviZaPrikaz(s.gradovi)).html;
     }
 
+    if (promijenjenaPrognoza || prije?.visine !== s.visine) iscrtajDron(s);
+
     prije = s;
   };
+
+  const dronEl = dio('dron');
+  const iscrtajDron = (s: Stanje): void => {
+    dronEl.innerHTML = prikaziDron(s.status === 'greska' ? null : zaPrikaz(s), s.mjesto, s.visine).html;
+  };
+  /** Dron izabran ili promijenjen u listu: kartica i list se odmah preračunaju. */
+  const promijeniDron = (id: string): void => {
+    izaberiModel(id);
+    const s = skladiste.daj();
+    iscrtajDron(s);
+    const p = zaPrikaz(s);
+    if (p) list.otvori('Dron', prikaziDronDetalje(p, s.mjesto, s.visine));
+  };
+  document.addEventListener('change', (e) => {
+    const el = e.target as HTMLElement;
+    if (el.matches('[data-dron-model]')) {
+      const v = (el as HTMLSelectElement).value;
+      // "Drugi": počni od 10 m/s, pa korisnik upiše svoj broj.
+      promijeniDron(v === 'drugi' ? 'drugi:10' : v);
+    } else if (el.matches('[data-dron-otpor]')) {
+      const ms = Number((el as HTMLInputElement).value.replace(',', '.'));
+      if (ms >= 3 && ms <= 25) promijeniDron(`drugi:${ms}`);
+    }
+  });
 
   korijen.addEventListener('click', (e) => {
     const cilj = (e.target as Element).closest<HTMLElement>('[data-akcija]');
@@ -403,6 +430,11 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
         const grad = GRADOVI[i];
         const p = gradoviZaPrikaz(s.gradovi).prognoze[i];
         if (grad && p) list.otvori(grad.ime, prikaziGradDetalje(grad, p));
+        break;
+      }
+      case 'dron': {
+        const p = zaPrikaz(s);
+        if (p) list.otvori('Dron', prikaziDronDetalje(p, s.mjesto, s.visine));
         break;
       }
       case 'radar':

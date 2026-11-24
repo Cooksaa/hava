@@ -67,16 +67,3 @@ export function prikaziGradDetalje(grad: Grad, p: Prognoza): Sirovo {
     </div>
   `;
 }
-
-export function prikaziDron(): Sirovo {
-  return html`
-    <section class="kartica dron" aria-labelledby="dron-naslov">
-      <div class="kartica__vrh">
-        <span class="kartica__znak">${ikonaUi('dron')}</span>
-        <h2 class="kartica__naslov" id="dron-naslov">Dron</h2>
-        <span class="dron__uskoro">uskoro</span>
-      </div>
-      <p class="kartica__detalj">Ocjena po satima, vjetar na visini leta i zone zabrane.</p>
-    </section>
-  `;
-}

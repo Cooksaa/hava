@@ -193,12 +193,14 @@ button.grad:active {
 
 /* --- Dron --- */
 
-.dron__uskoro {
+/* Ime drona tiho desno od naslova. */
+.dron__model {
   margin-left: auto;
-  padding: 3px 10px;
-  border-radius: var(--r-pilula);
-  border: 1px solid rgb(255 255 255 / 0.3);
   font-size: 0.8125rem;
+  color: var(--tekst-tihi);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dron .kartica__detalj {
@@ -708,4 +710,98 @@ button.grad:active {
   padding: 0 14px;
   color: var(--tekst-tihi);
   font-weight: 600;
+}
+
+/* --- Dron --- */
+
+/* Znak u boji ocjene (u "aktivnostima" je inače neutralan). */
+.dron[data-nivo] .kartica__znak {
+  background: var(--nivo);
+}
+
+/*
+ * Sati za dron: zeleno puno, žuto puno pa blijedo (ne samo boja), crveno išrafirano.
+ * Tako se razlikuju i bez boje, kao traka za veš.
+ */
+.dron__traka i[data-o='zeleno'] {
+  background: var(--moze);
+}
+
+.dron__traka i[data-o='zuto'] {
+  background: linear-gradient(var(--pazi) 0 50%, rgb(233 185 73 / 0.45) 50%);
+}
+
+.dron__traka i[data-o='crveno'] {
+  background: repeating-linear-gradient(115deg, var(--nemoj) 0 2px, rgb(255 255 255 / 0.12) 2px 5px);
+}
+
+.dron .kartica__detalj {
+  margin-top: 8px;
+}
+
+.dron-model {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 18px;
+  font-size: 0.875rem;
+  color: var(--tekst-tihi);
+}
+
+.dron-model select,
+.dron-model input {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  background: rgb(255 255 255 / 0.1);
+  color: var(--tekst);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.dron-model option {
+  color: #0b1524;
+}
+
+.dron-sati {
+  margin-top: 10px;
+  list-style: none;
+  padding: 0;
+}
+
+.dron-sati li {
+  display: grid;
+  grid-template-columns: 3ch 6ch 7ch 1fr;
+  gap: 10px;
+  align-items: baseline;
+  padding: 8px 0;
+  border-top: 1px solid rgb(255 255 255 / 0.08);
+  font-size: 0.9375rem;
+}
+
+.dron-sati__ocjena i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--moze);
+}
+
+.dron-sati li[data-o='zuto'] .dron-sati__ocjena i {
+  background: var(--pazi);
+}
+
+.dron-sati li[data-o='crveno'] .dron-sati__ocjena i {
+  background: var(--nemoj);
+}
+
+.dron-sati__zasto {
+  color: var(--tekst-tihi);
+  font-size: 0.8125rem;
+}
+
+.dron-napomena {
+  margin-top: 22px;
 }

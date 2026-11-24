@@ -7,6 +7,14 @@ import type { Novost } from './logic/novosti';
  */
 export const NOVOSTI: Novost[] = [
   {
+    verzija: '0.7.0',
+    stavke: [
+      'Dron: može li se danas dići, sat po sat u boji. Gleda vjetar na visini leta (80–120 m), udare, kišu i hladnoću.',
+      'Izaberi svoj dron (DJI Lito 1, Mini, Air, Mavic, Neo…) ili upiši koliki vjetar izdrži.',
+      'Zlatni i plavi sat za snimanje, jutro i veče.',
+    ],
+  },
+  {
     verzija: '0.6.1',
     stavke: ['Popravljeno: kartica za uključivanje obavijesti se sad pokazuje pri dnu ekrana.'],
   },

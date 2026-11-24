@@ -7,7 +7,9 @@ import {
 } from './api/cache';
 import { GreskaPrognoze, dohvatiPrognoze, dohvatiPrognozu } from './api/openMeteo';
 import { dohvatiRadar, type Radar } from './api/radar';
+import { dohvatiVisine } from './api/visina';
 import { dohvatiZrak } from './api/zrak';
+import type { Visina } from './logic/dron';
 import type { Zrak } from './logic/zrak';
 import { GRADOVI } from './config';
 import type { Mjesto, Prognoza } from './tipovi';
@@ -36,6 +38,8 @@ export interface Stanje {
   zrak: Zrak | null;
   /** Kiša u naredna 2 sata s radara; null dok ne stigne, van pokrivenosti ili bez mreže. */
   radar: Radar | null;
+  /** Vjetar na 80/120 m po satu (lokalno vrijeme), za dron. */
+  visine: Map<string, Visina> | null;
 }
 
 type Pretplatnik = (s: Stanje) => void;
@@ -63,6 +67,7 @@ export function stvoriSkladiste(pocetnoMjesto: Mjesto): Skladiste {
     gradovi: { status: 'ucitava', prognoze: ucitajGradove(GRADOVI.length) ?? [] },
     zrak: null,
     radar: null,
+    visine: null,
   };
   const pretplatnici = new Set<Pretplatnik>();
   let zahtjev: AbortController | null = null;
@@ -89,9 +94,13 @@ export function stvoriSkladiste(pocetnoMjesto: Mjesto): Skladiste {
     void dohvatiRadar(mjesto, moj.signal).then((radar) => {
       if (!moj.signal.aborted && radar) postavi({ radar });
     });
+    // Vjetar na visini za dron, isto paralelno.
+    void dohvatiVisine(mjesto, moj.signal).then((visine) => {
+      if (!moj.signal.aborted && visine) postavi({ visine });
+    });
     postavi({
       mjesto,
-      ...(istoMjesto ? {} : { zrak: null, radar: null }),
+      ...(istoMjesto ? {} : { zrak: null, radar: null, visine: null }),
       prognoza: staro?.prognoza ?? null,
       spremljeno: staro?.spremljeno ?? null,
       status: staro ? 'spremno' : 'ucitava',
