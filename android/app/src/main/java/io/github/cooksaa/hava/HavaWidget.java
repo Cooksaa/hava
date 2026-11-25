@@ -74,7 +74,10 @@ public class HavaWidget extends AppWidgetProvider {
                 return v;
             }
             v.setTextViewText(R.id.w_temp, kadar.getInt("temp") + "°");
-            v.setTextViewText(R.id.w_izgled, kadar.optString("opis") + ". " + kadar.optString("izgled") + ".");
+            // Jedna rečenica: "Kiša, pada do 10h." / "Oblačno, kiša oko 15h."
+            String izgled = kadar.optString("izgled");
+            if (!izgled.isEmpty()) izgled = izgled.substring(0, 1).toLowerCase(java.util.Locale.ROOT) + izgled.substring(1);
+            v.setTextViewText(R.id.w_izgled, kadar.optString("opis") + ", " + izgled + ".");
             v.setImageViewResource(R.id.w_ikona, ikona(kadar.optString("ikona")));
 
             JSONObject ves = o.optJSONObject("ves");
