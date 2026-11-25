@@ -7,6 +7,10 @@ import type { Novost } from './logic/novosti';
  */
 export const NOVOSTI: Novost[] = [
   {
+    verzija: '0.8.1',
+    stavke: ['Tekst na mapi se lakše čita: imena sela više ne prolaze kroz naslov i legendu.'],
+  },
+  {
     verzija: '0.8.0',
     stavke: [
       'DJI zone za dron na mapi: aerodromi, stadioni i ostale zone, u bojama kao u DJI Fly. Dodirni zonu da vidiš šta znači.',
