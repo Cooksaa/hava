@@ -7,6 +7,10 @@ import type { Novost } from './logic/novosti';
  */
 export const NOVOSTI: Novost[] = [
   {
+    verzija: '0.8.2',
+    stavke: ['Popravljeno: dodir bilo gdje više ne otvara karticu Dron.'],
+  },
+  {
     verzija: '0.8.1',
     stavke: ['Tekst na mapi se lakše čita: imena sela više ne prolaze kroz naslov i legendu.'],
   },

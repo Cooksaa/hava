@@ -13,6 +13,15 @@
   font-size: 18px;
 }
 
+/*
+ * Dugme "više" se nevidljivo razvuče preko cijele kartice (::after). Kartica zato MORA
+ * biti pozicionirana, inače sloj pokrije cijeli ekran i svaki dodir otvara tu karticu
+ * (tako je u 0.7.0–0.8.1 svaki dodir otvarao Dron).
+ */
+.kartica:has(> .kartica__vrh .kartica__vise) {
+  position: relative;
+}
+
 .kartica__vise::after {
   content: '';
   position: absolute;
