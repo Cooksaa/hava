@@ -1,5 +1,6 @@
 import { App } from '@capacitor/app';
 import { BackgroundRunner } from '@capacitor/background-runner';
+import { registerPlugin } from '@capacitor/core';
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { citajStanje, dohvatiIzdanje, pisiStanje, type Zapamceno } from './api/azuriranje';
@@ -39,6 +40,18 @@ export function pokreniAndroid(app: Aplikacija): void {
     provjeri: () => azuriraj(app, true),
   });
   if (Capacitor.isPluginAvailable(DODATAK_OBAVIJESTI)) app.postaviObavijesti(obavijesti);
+  // Widget postoji od APK-a 1.0.0; stariji APK ga nema (ažuriranje web dijela ide tek od 1.0.0).
+  if (Capacitor.isPluginAvailable('HavaWidget')) {
+    let zadnje = '';
+    app.postaviWidget((p) => {
+      const podaci = JSON.stringify(p);
+      // Isti kadrovi (osim vremena računanja): widget se ne dira.
+      const bez = JSON.stringify({ ...p, izracunato: 0 });
+      if (bez === zadnje) return;
+      zadnje = bez;
+      void HavaWidget.postavi({ podaci }).catch(() => undefined);
+    });
+  }
   void azuriraj(app);
   void izmjeri(app);
   void upozori(app);
@@ -59,6 +72,7 @@ export function pokreniAndroid(app: Aplikacija): void {
  * i kad je aplikacija zatvorena; ovdje joj se samo javi mjesto i da li je uključena.
  */
 const RUNNER = 'io.github.cooksaa.hava.provjera';
+const HavaWidget = registerPlugin<{ postavi(o: { podaci: string }): Promise<void> }>('HavaWidget');
 /** Ime pod kojim se dodatak registruje (registerPlugin u @capacitor/background-runner), ne ime u kodu. */
 export const DODATAK_OBAVIJESTI = 'CapacitorBackgroundRunner';
 const KLJUC_OBAVIJESTI = 'obavijesti:v1';
@@ -112,7 +126,8 @@ const obavijesti: Obavijesti = {
     javiPozadini(m, false);
   },
   mjesto(m) {
-    if (citajObavijesti() === 'ukljuceno') javiPozadini(m, true);
+    // Pozadinska provjera treba mjesto i za widget, ne samo za obavijesti.
+    javiPozadini(m, citajObavijesti() === 'ukljuceno');
   },
 };
 

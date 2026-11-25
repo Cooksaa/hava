@@ -28,6 +28,9 @@ import { prikaziUpozorenja, upozorenjaDetalji } from './upozorenja';
 import { prikaziVes, prikaziVesDetalje } from './ves';
 import { kisaZaPrikaz, prikaziKisuSad } from './kisaSad';
 import { stvoriRadarMapu } from './radarMapa';
+import { kadroviWidgeta, satiIzPrognoze, type PodaciWidgeta } from '../logic/widget';
+import { procijeniVes } from '../logic/ves';
+import { vesRecenica } from '../tekst';
 import { dohvatiRutu, vrijemeNaRuti } from '../api/put';
 import { vrijemePolaska, type Polazak } from '../logic/put';
 import { prikaziPut, prikaziPutDetalje, type StanjePuta } from './put';
@@ -151,6 +154,8 @@ export interface Aplikacija {
   postaviUpozorenja(z: MaZapis[]): void;
   postaviAzuriranje(a: Azuriranje): void;
   postaviObavijesti(o: Obavijesti): void;
+  /** Android: widget dobija podatke kad stigne nova prognoza. */
+  postaviWidget(fn: (p: PodaciWidgeta) => void): void;
 }
 
 export type StanjeObavijesti = 'nije-birano' | 'ukljuceno' | 'iskljuceno' | 'odbijeno';
@@ -420,6 +425,7 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
     }
 
     if (promijenjenaPrognoza || prije?.visine !== s.visine) iscrtajDron(s);
+    if (promijenjenaPrognoza) posaljiWidgetu(s);
     // Put se računa jednom pri pokretanju, pa kad je stariji od 15 min (nova prognoza).
     const putStar =
       put !== null &&
@@ -503,6 +509,21 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
     'Kuda putuješ?',
     'put-naslov',
   );
+
+  /* --- Widget (Android) --- */
+  let widget: ((p: PodaciWidgeta) => void) | null = null;
+  function posaljiWidgetu(s: Stanje): void {
+    const p = zaPrikaz(s);
+    if (!widget || !p || s.status === 'greska') return;
+    const danas = p.dani[0];
+    widget({
+      mjesto: s.mjesto.ime,
+      izracunato: Date.now(),
+      kadrovi: kadroviWidgeta(satiIzPrognoze(p), Date.now()),
+      // Veš za danas (ili "Sutra…" uveče), vezan za današnji datum.
+      ves: danas ? { datum: danas.datum, tekst: vesRecenica(procijeniVes(p)).glavno } : undefined,
+    });
+  }
 
   const dronEl = dio('dron');
   const iscrtajDron = (s: Stanje): void => {
@@ -747,6 +768,10 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
     },
     postaviAzuriranje(a: Azuriranje) {
       azuriranje = a;
+    },
+    postaviWidget(fn: (p: PodaciWidgeta) => void) {
+      widget = fn;
+      posaljiWidgetu(skladiste.daj());
     },
     postaviObavijesti(o: Obavijesti) {
       obavijesti = o;

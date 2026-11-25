@@ -7,6 +7,13 @@ import type { Novost } from './logic/novosti';
  */
 export const NOVOSTI: Novost[] = [
   {
+    verzija: '1.0.0',
+    stavke: [
+      'Widget na početnom ekranu: temperatura, šta slijedi s kišom i veš, bez otvaranja aplikacije. Drži prst na praznom dijelu ekrana → Widgeti → Hava.',
+      'Widget se osvježava sam, i kad Havu dugo ne otvaraš.',
+    ],
+  },
+  {
     verzija: '0.9.1',
     stavke: ['„Danas od … do …“ sad uključuje i izmjerenu temperaturu, i kad model kaže drugačije.'],
   },

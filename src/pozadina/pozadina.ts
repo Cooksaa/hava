@@ -7,7 +7,8 @@
  *
  * Događaji:
  *  - "postavi": aplikacija javi mjesto i da li su obavijesti uključene
- *  - "provjeri": upozorenja (MeteoAlarm) i model (ICON-2I) → obavijest ako je baš jako
+ *  - "provjeri": svježi kadrovi za widget (uvijek), pa upozorenja (MeteoAlarm) i model
+ *    (ICON-2I) → obavijest ako je baš jako (samo kad su obavijesti uključene)
  */
 
 import {
@@ -20,7 +21,9 @@ import {
   type Obavijest,
   type SatModela,
 } from '../logic/obavijesti';
+import { lokalno } from '../logic/sarajevo';
 import { regijaZa, upozorenjaZa, type MaZapis } from '../logic/upozorenja';
+import { kadroviWidgeta, type PodaciWidgeta, type SatWidgeta } from '../logic/widget';
 
 interface Postavke {
   ukljuceno: boolean;
@@ -43,6 +46,8 @@ declare function addEventListener(
 
 const POSTAVKE = 'hava:postavke';
 const POSLANO = 'hava:poslano';
+/** Isti ključ čita HavaWidget.java. */
+const WIDGET = 'hava:widget';
 const UPOZORENJA = 'https://feeds.meteoalarm.org/api/v1/warnings/feeds-bosnia-herzegovina';
 
 function citaj<T>(kljuc: string): T | null {
@@ -60,32 +65,69 @@ async function json(url: string): Promise<unknown> {
   return JSON.parse(await o.text()) as unknown;
 }
 
-function satiModela(p: { lat: number; lon: number }): Promise<SatModela[]> {
+interface SatPozadine extends SatModela, SatWidgeta {}
+
+/** Jedan upit za oboje: obavijesti (12 h) i widget (24 h). */
+function satiModela(p: { lat: number; lon: number }): Promise<SatPozadine[]> {
   const url =
     'https://api.open-meteo.com/v1/forecast' +
     `?latitude=${p.lat.toFixed(3)}&longitude=${p.lon.toFixed(3)}` +
-    '&hourly=precipitation,wind_gusts_10m&models=italia_meteo_arpae_icon_2i' +
-    '&forecast_hours=13&timeformat=unixtime&timezone=GMT';
+    '&hourly=temperature_2m,precipitation,weather_code,wind_gusts_10m,is_day' +
+    '&models=italia_meteo_arpae_icon_2i&forecast_hours=30&timeformat=unixtime&timezone=GMT';
   return json(url).then((j) => {
-    const h = (j as { hourly?: { time?: number[]; precipitation?: (number | null)[]; wind_gusts_10m?: (number | null)[] } })
-      .hourly;
+    type Niz = (number | null)[];
+    const h = (
+      j as {
+        hourly?: { time?: number[]; temperature_2m?: Niz; precipitation?: Niz; weather_code?: Niz; wind_gusts_10m?: Niz; is_day?: Niz };
+      }
+    ).hourly;
     return (h?.time ?? []).map((t, i) => ({
       vrijeme: t * 1000,
+      t: t * 1000,
       kisa: h?.precipitation?.[i] ?? 0,
+      kisaMm: h?.precipitation?.[i] ?? 0,
+      kisaVjer: 0,
       udari: h?.wind_gusts_10m?.[i] ?? 0,
+      temp: h?.temperature_2m?.[i] ?? 0,
+      kod: h?.weather_code?.[i] ?? 0,
+      dan: (h?.is_day?.[i] ?? 1) === 1,
     }));
   });
 }
 
+/** Svježi kadrovi za widget; veš ostaje od aplikacije ako je za danas. */
+function osvjeziWidget(p: Postavke, sati: SatPozadine[], sad: number): void {
+  const staro = citaj<PodaciWidgeta>(WIDGET);
+  const kadrovi = kadroviWidgeta(sati, sad);
+  if (!kadrovi.length) return;
+  const podaci: PodaciWidgeta = {
+    mjesto: p.ime,
+    izracunato: sad,
+    kadrovi,
+    ves: staro?.ves && staro.ves.datum === lokalno(sad).datum ? staro.ves : undefined,
+  };
+  CapacitorKV.set(WIDGET, JSON.stringify(podaci));
+}
+
 async function provjeri(): Promise<void> {
   const p = citaj<Postavke>(POSTAVKE);
-  if (!p?.ukljuceno) return;
+  // Mjesto javi aplikacija; bez njega nema ni widgeta ni obavijesti.
+  if (!p || typeof p.lat !== 'number') return;
   try {
     if (!CapacitorDevice.getNetworkStatus().connected) return;
   } catch {
     /* bez podatka o mreži: probaj svejedno */
   }
   const sad = Date.now();
+  let sati: SatPozadine[] = [];
+  try {
+    sati = await satiModela(p);
+    osvjeziWidget(p, sati, sad);
+  } catch {
+    /* sljedeći put */
+  }
+  if (!p.ukljuceno) return;
+
   const sluzbene: Obavijest[] = [];
   const model: Obavijest[] = [];
 
@@ -100,13 +142,7 @@ async function provjeri(): Promise<void> {
     }
   }
   // Model: noću ne budimo ljude (službeno upozorenje gore ide i noću).
-  if (!noc(sad)) {
-    try {
-      model.push(...obavijestiModela(await satiModela(p), p.ime, sad));
-    } catch {
-      /* sljedeći put */
-    }
-  }
+  if (!noc(sad) && sati.length) model.push(...obavijestiModela(sati, p.ime, sad));
 
   const sve = bezDuplikata(sluzbene, model);
   const { nove, poslano } = zaSlanje(sve, citaj<Record<string, number>>(POSLANO) ?? {}, sad);

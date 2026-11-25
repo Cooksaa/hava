@@ -9,6 +9,9 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Naš mali dodatak za widget (HavaWidgetPlugin): registruje se prije Capacitora.
+        registerPlugin(HavaWidgetPlugin.class);
+
         // Prvo Capacitor: on prebaci temu s početnog ekrana na pravu temu aplikacije.
         // Da je EdgeToEdge pozvan prije, prozor bi se napravio sa starom temom
         // i na vrhu bi ostala traka s naslovom i stisnutom slikom početnog ekrana.
