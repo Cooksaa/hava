@@ -7,6 +7,10 @@ import type { Novost } from './logic/novosti';
  */
 export const NOVOSTI: Novost[] = [
   {
+    verzija: '1.0.3',
+    stavke: ['Widget koristi cijelu širinu: rečenice se ne prelamaju prerano.'],
+  },
+  {
     verzija: '1.0.2',
     stavke: ['Widget piše Havinim fontom, i č, ć, š, ž se konačno crtaju kako treba i na Xiaomiju.'],
   },

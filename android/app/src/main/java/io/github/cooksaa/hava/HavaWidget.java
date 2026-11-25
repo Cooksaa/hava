@@ -70,8 +70,12 @@ public class HavaWidget extends AppWidgetProvider {
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_hava);
         DisplayMetrics dm = c.getResources().getDisplayMetrics();
 
-        // Širina widgeta (u uspravnom položaju je to najmanja širina), minus unutrašnji razmak.
-        int sirinaDp = m.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 300);
+        // Širina widgeta minus unutrašnji razmak. Xiaomi kao "najmanju" javlja manje od stvarne
+        // širine, pa uzimamo veću; ako tekst ipak ne stane, ImageView (fitStart) ga samo smanji.
+        Bundle op = m.getAppWidgetOptions(id);
+        int sirinaDp = Math.max(
+            op.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0),
+            op.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0));
         if (sirinaDp <= 0) sirinaDp = 300;
         int puna = px(dm, sirinaDp - 38);
         int lijevo = puna - px(dm, 52); // pored ikone
