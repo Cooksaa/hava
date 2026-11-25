@@ -9,17 +9,18 @@ import { ikonaUi } from './ikone';
 import { listaSati, narednaDvadesetCetiri } from './sati';
 
 /*
- * Putujem, faza 1: "Pada li u…?" za šest gradova, svi odjednom.
- * Odredište, ruta i radar dolaze u fazi 3.
+ * Putujem: odredište i vrijeme duž puta (ui/put.ts), pa "Pada li u…?" za šest gradova.
  */
 
-export function prikaziPutujem(g: StanjeGradova): Sirovo {
+export function prikaziPutujem(g: StanjeGradova, put: Sirovo = html``): Sirovo {
   return html`
     <section class="kartica putujem" aria-labelledby="putujem-naslov">
       <div class="kartica__vrh">
         <span class="kartica__znak">${ikonaUi('auto')}</span>
         <h2 class="kartica__naslov" id="putujem-naslov">Putujem</h2>
       </div>
+      ${put}
+      <h3 class="gradovi__naslov">Pada li u…</h3>
       ${g.status === 'greska' && !g.prognoze.length
         ? html`
             <p class="kartica__detalj">Ne mogu provjeriti gradove bez interneta.</p>

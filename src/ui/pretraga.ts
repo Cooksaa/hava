@@ -19,13 +19,13 @@ export interface Pretraga {
   otvori(): void;
 }
 
-export function stvoriPretragu(naIzbor: (m: Mjesto) => void): Pretraga {
+export function stvoriPretragu(naIzbor: (m: Mjesto) => void, naslov = 'Koje mjesto?', id = 'pretraga-naslov'): Pretraga {
   const dijalog = document.createElement('dialog');
   dijalog.className = 'pretraga';
-  dijalog.setAttribute('aria-labelledby', 'pretraga-naslov');
+  dijalog.setAttribute('aria-labelledby', id);
   dijalog.innerHTML = html`
     <div class="pretraga__vrh">
-      <h2 class="pretraga__naslov" id="pretraga-naslov">Koje mjesto?</h2>
+      <h2 class="pretraga__naslov" id="${id}">${naslov}</h2>
       <button class="okruglo" type="button" data-zatvori aria-label="Zatvori">${ikonaUi('zatvori')}</button>
     </div>
     <div class="pretraga__polje">

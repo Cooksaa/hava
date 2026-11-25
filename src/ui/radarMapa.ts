@@ -1,7 +1,10 @@
 import type { GeoJSONSource, Map as Karta, ImageSource } from 'maplibre-gl';
+import type { FeatureCollection, Feature } from 'geojson';
 import { lonLat, okviriZaMapu, type Okvir, type Radar } from '../api/radar';
 import { dohvatiZone, imaZone, NAJVECI_RADIJUS } from '../api/zone';
 import { NIVOI, zoneNaTacki, type Zona } from '../logic/zone';
+import type { Ruta } from '../api/put';
+import { km, type TackaPuta, type Uslov } from '../logic/put';
 import { bojaKise } from '../logic/radar';
 import type { Mjesto } from '../tipovi';
 import { html, type Sirovo } from './html';
@@ -36,8 +39,52 @@ interface Kadar {
 
 export type RezimMape = 'radar' | 'zone';
 
+/** Putujem: ruta i tačke s uslovima, crta se preko radara. */
+export interface PutNaMapi {
+  ruta: Ruta;
+  tacke: TackaPuta[];
+}
+
+/** Boje puta po uslovima (iste kao traka u kartici). */
+const BOJA_USLOVA: Record<Uslov, string> = {
+  suho: '#35b58a',
+  kisa: '#7cc3ff',
+  'jaka-kisa': '#3d8bff',
+  magla: '#b9c0cc',
+  vjetar: '#e9b949',
+  snijeg: '#ffffff',
+  poledica: '#e2604f',
+};
+
+/** Linija rute podijeljena na komade, svaki u boji najbliže tačke s prognozom. */
+function komadiPuta(p: PutNaMapi): FeatureCollection {
+  const features: Feature[] = [];
+  let d = 0;
+  let komad: [number, number][] = [];
+  let boja = '';
+  const bojaZa = (dKm: number): string => {
+    let naj = p.tacke[0];
+    for (const t of p.tacke) if (Math.abs(t.km - dKm) < Math.abs((naj?.km ?? 0) - dKm)) naj = t;
+    return BOJA_USLOVA[naj?.uslov ?? 'suho'];
+  };
+  p.ruta.linija.forEach((t, i, a) => {
+    if (i > 0) d += km(a[i - 1]![1], a[i - 1]![0], t[1], t[0]);
+    const b = bojaZa(d);
+    if (b !== boja && komad.length) {
+      komad.push(t);
+      features.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: komad }, properties: { boja } });
+      komad = [];
+    }
+    boja = b;
+    komad.push(t);
+  });
+  if (komad.length > 1)
+    features.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: komad }, properties: { boja } });
+  return { type: 'FeatureCollection', features };
+}
+
 export interface RadarMapa {
-  otvori(m: Mjesto, radar: Radar | null, rezim?: RezimMape): void;
+  otvori(m: Mjesto, radar: Radar | null, rezim?: RezimMape, put?: PutNaMapi): void;
 }
 
 const satMin = (ms: number): string =>
@@ -210,7 +257,7 @@ export function stvoriRadarMapu(): RadarMapa {
         layout: { 'fill-sort-key': ['-', 10, ['get', 'red']] },
         paint: { 'fill-color': ['get', 'boja'], 'fill-opacity': 0.22 },
       },
-      ispod,
+      ispod
     );
     kt.addLayer(
       {
@@ -219,7 +266,7 @@ export function stvoriRadarMapu(): RadarMapa {
         source: 'zone',
         paint: { 'line-color': ['get', 'boja'], 'line-width': 1.5, 'line-opacity': 0.9 },
       },
-      ispod,
+      ispod
     );
     kt.on('moveend', () => {
       if (dijalog.dataset.rezim !== 'zone') return;
@@ -231,7 +278,8 @@ export function stvoriRadarMapu(): RadarMapa {
       const na = zoneNaTacki([...zone.values()], e.lngLat.lat, e.lngLat.lng);
       const z = na[0];
       if (!z) {
-        infoEl.innerHTML = html`<p class="mapa__zona-ime">Ovdje nema DJI zone.</p>${legenda()}`.html;
+        infoEl.innerHTML = html`<p class="mapa__zona-ime">Ovdje nema DJI zone.</p>
+          ${legenda()}`.html;
         return;
       }
       const n = NIVOI[z.nivo]!;
@@ -269,11 +317,11 @@ export function stvoriRadarMapu(): RadarMapa {
     opisEl.textContent = r.stare
       ? 'DJI ne odgovara: zone od jučer.'
       : vidi
-        ? `${vidi} ${vidi === 1 ? 'zona' : vidi < 5 ? 'zone' : 'zona'} u blizini`
-        : 'Nema zona u blizini.';
+      ? `${vidi} ${vidi === 1 ? 'zona' : vidi < 5 ? 'zone' : 'zona'} u blizini`
+      : 'Nema zona u blizini.';
   }
 
-  async function napuni(m: Mjesto, radar: Radar | null, rezim: RezimMape): Promise<void> {
+  async function napuni(m: Mjesto, radar: Radar | null, rezim: RezimMape, put?: PutNaMapi): Promise<void> {
     const [maplibregl, { default: radnik }, okviri] = await Promise.all([
       import('maplibre-gl'),
       // Radnik (worker) mape kao zaseban fajl: MapLibre ga inače traži pored sebe, a Vite ga premjesti.
@@ -339,6 +387,21 @@ export function stvoriRadarMapu(): RadarMapa {
         },
       });
       postaviZone(kt);
+      kt.addSource('put', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      kt.addLayer({
+        id: 'put-sjena',
+        type: 'line',
+        source: 'put',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#0b1524', 'line-width': 8 },
+      });
+      kt.addLayer({
+        id: 'put-linija',
+        type: 'line',
+        source: 'put',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': ['get', 'boja'], 'line-width': 4.5 },
+      });
     } else {
       kt.jumpTo({ center: [m.lon, m.lat], zoom: rezim === 'zone' ? 11 : 6.4 });
     }
@@ -371,6 +434,21 @@ export function stvoriRadarMapu(): RadarMapa {
       );
     };
 
+    (kt.getSource('put') as GeoJSONSource | undefined)?.setData(
+      put ? komadiPuta(put) : { type: 'FeatureCollection', features: [] }
+    );
+    // Put: cijela ruta na ekranu (ostavi mjesta za panele gore i dole).
+    if (put && put.ruta.linija.length > 1) {
+      const lon = put.ruta.linija.map((t) => t[0]);
+      const lat = put.ruta.linija.map((t) => t[1]);
+      kt.fitBounds(
+        [
+          [Math.min(...lon), Math.min(...lat)],
+          [Math.max(...lon), Math.max(...lat)],
+        ],
+        { padding: { top: 110, bottom: 140, left: 30, right: 30 }, duration: 0 }
+      );
+    }
     for (const id of ['zone-povrsina', 'zone-ivica']) {
       if (kt.getLayer(id)) kt.setLayoutProperty(id, 'visibility', rezim === 'zone' ? 'visible' : 'none');
     }
@@ -442,14 +520,14 @@ export function stvoriRadarMapu(): RadarMapa {
   }
 
   return {
-    otvori(m, radar, rezim = 'radar') {
+    otvori(m, radar, rezim = 'radar', put) {
       dijalog.dataset.rezim = rezim;
       dijalog.setAttribute('aria-label', rezim === 'zone' ? 'Zone za dron' : 'Radar padavina');
       if (!dijalog.open) dijalog.showModal();
       opisEl.textContent = rezim === 'zone' ? 'Učitavam zone' : 'Učitavam radar';
       vrijemeEl.textContent = '';
       infoEl.innerHTML = legenda().html;
-      void napuni(m, radar, rezim).catch(() => {
+      void napuni(m, radar, rezim, put).catch(() => {
         opisEl.textContent = 'Mapa se nije učitala. Provjeri internet.';
       });
     },

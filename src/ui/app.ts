@@ -28,6 +28,9 @@ import { prikaziUpozorenja, upozorenjaDetalji } from './upozorenja';
 import { prikaziVes, prikaziVesDetalje } from './ves';
 import { kisaZaPrikaz, prikaziKisuSad } from './kisaSad';
 import { stvoriRadarMapu } from './radarMapa';
+import { dohvatiRutu, vrijemeNaRuti } from '../api/put';
+import { vrijemePolaska, type Polazak } from '../logic/put';
+import { prikaziPut, prikaziPutDetalje, type StanjePuta } from './put';
 import { apkVerzija, obrisi, prati as pratiDnevnik, sviZapisi } from '../dnevnik';
 import { brojGresaka, izvjestaj, uredjaj } from '../logic/dnevnik';
 
@@ -371,6 +374,7 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
       obavijesti?.mjesto(s.mjesto);
       iscrtajObavijesti();
       ucitajZoneMjesta(s.mjesto);
+      if (prije && put) void izracunajPut();
     }
     iscrtajUpozorenja(s);
 
@@ -412,13 +416,93 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
     }
 
     if (!prije || prije.gradovi !== s.gradovi) {
-      putujemEl.innerHTML = prikaziPutujem(gradoviZaPrikaz(s.gradovi)).html;
+      iscrtajPutujem(s);
     }
 
     if (promijenjenaPrognoza || prije?.visine !== s.visine) iscrtajDron(s);
+    // Put se računa jednom pri pokretanju, pa kad je stariji od 15 min (nova prognoza).
+    const putStar =
+      put !== null &&
+      (putIzracunat === 0 ? !putZahtjev : put.status !== 'ucitava' && Date.now() - putIzracunat > 15 * 60e3);
+    if (putStar) void izracunajPut();
 
     prije = s;
   };
+
+  /* --- Putujem: odredište i vrijeme duž puta --- */
+
+  const KLJUC_PUT = 'put:v1';
+  let put: StanjePuta | null = (() => {
+    try {
+      const z = JSON.parse(localStorage.getItem(KLJUC_PUT) ?? 'null') as { odrediste: Mjesto; polazak: Polazak } | null;
+      return z?.odrediste ? { odrediste: z.odrediste, polazak: z.polazak ?? 'sad', status: 'ucitava' } : null;
+    } catch {
+      return null;
+    }
+  })();
+  let putIzracunat = 0;
+  let putZahtjev: AbortController | null = null;
+  const sacuvajPut = (): void => {
+    try {
+      if (put) localStorage.setItem(KLJUC_PUT, JSON.stringify({ odrediste: put.odrediste, polazak: put.polazak }));
+      else localStorage.removeItem(KLJUC_PUT);
+    } catch {
+      /* bez pamćenja */
+    }
+  };
+  function iscrtajPutujem(s: Stanje): void {
+    putujemEl.innerHTML = prikaziPutujem(gradoviZaPrikaz(s.gradovi), prikaziPut(put, s.mjesto)).html;
+  }
+  /** Službena upozorenja za regije kroz koje put prolazi, u vrijeme vožnje. */
+  function upozorenjaNaPutu(p: StanjePuta): Upozorenje[] {
+    const tacke = p.tacke ?? [];
+    if (!tacke.length) return [];
+    const od = tacke[0]!.kad;
+    const do_ = tacke[tacke.length - 1]!.kad;
+    const regije = new Set(tacke.map((t) => regijaZa(t.lat, t.lon)).filter((x): x is string => !!x));
+    const sve = [...regije].flatMap((r) => upozorenjaZa(upozorenjaZapisi, r, Date.now()));
+    const vidjeno = new Set<string>();
+    return sve
+      .filter((u) => u.od <= do_ && u.do >= od)
+      .sort((a, b) => b.nivo - a.nivo)
+      .filter((u) => {
+        const k = `${u.vrsta}|${u.regija}`;
+        if (vidjeno.has(k)) return false;
+        vidjeno.add(k);
+        return true;
+      });
+  }
+  async function izracunajPut(): Promise<void> {
+    if (!put) return;
+    putZahtjev?.abort();
+    const moj = new AbortController();
+    putZahtjev = moj;
+    const od = skladiste.daj().mjesto;
+    put = { odrediste: put.odrediste, polazak: put.polazak, status: 'ucitava' };
+    iscrtajPutujem(skladiste.daj());
+    try {
+      const ruta = await dohvatiRutu(od, put.odrediste, moj.signal);
+      const tacke = await vrijemeNaRuti(ruta, vrijemePolaska(put.polazak, Date.now()), moj.signal);
+      if (moj.signal.aborted || !put) return;
+      put = { ...put, status: 'spremno', ruta, tacke };
+      put.upozorenja = upozorenjaNaPutu(put);
+      putIzracunat = Date.now();
+    } catch {
+      if (moj.signal.aborted || !put) return;
+      put = { ...put, status: 'greska' };
+      putIzracunat = Date.now();
+    }
+    iscrtajPutujem(skladiste.daj());
+  }
+  const pretragaPuta = stvoriPretragu(
+    (m) => {
+      put = { odrediste: m, polazak: put?.polazak ?? 'sad', status: 'ucitava' };
+      sacuvajPut();
+      void izracunajPut();
+    },
+    'Kuda putuješ?',
+    'put-naslov',
+  );
 
   const dronEl = dio('dron');
   const iscrtajDron = (s: Stanje): void => {
@@ -468,6 +552,14 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
     }
   });
 
+  // "Put na mapi" iz lista Putujem.
+  document.addEventListener('click', (e) => {
+    if (!(e.target as Element).closest('[data-put-mapa]') || !put?.ruta || !put.tacke) return;
+    list.zatvori();
+    const s = skladiste.daj();
+    radarMapa.otvori(s.mjesto, s.radar, 'radar', { ruta: put.ruta, tacke: put.tacke });
+  });
+
   // "Zone na mapi" iz lista drona (list nije u korijenu).
   document.addEventListener('click', (e) => {
     if (!(e.target as Element).closest('[data-zone-mapa]')) return;
@@ -488,6 +580,13 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
   });
 
   korijen.addEventListener('click', (e) => {
+    const polazak = (e.target as Element).closest<HTMLElement>('[data-polazak]');
+    if (polazak && put) {
+      put = { ...put, polazak: polazak.dataset.polazak as Polazak };
+      sacuvajPut();
+      void izracunajPut();
+      return;
+    }
     const cilj = (e.target as Element).closest<HTMLElement>('[data-akcija]');
     if (!cilj) return;
     const s = skladiste.daj();
@@ -525,6 +624,18 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
         if (d) list.otvori('Dron', d);
         break;
       }
+      case 'put-odrediste':
+        pretragaPuta.otvori();
+        break;
+      case 'put-ukloni':
+        putZahtjev?.abort();
+        put = null;
+        sacuvajPut();
+        iscrtajPutujem(s);
+        break;
+      case 'put':
+        if (put) list.otvori('Putujem', prikaziPutDetalje(put, s.mjesto, true));
+        break;
       case 'izvjestaj':
         list.otvori('Izvještaj o greškama', izvjestajDetalji());
         break;

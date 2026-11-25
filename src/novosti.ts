@@ -7,6 +7,13 @@ import type { Novost } from './logic/novosti';
  */
 export const NOVOSTI: Novost[] = [
   {
+    verzija: '0.9.0',
+    stavke: [
+      'Putujem: upiši kuda ideš i kad krećeš, pa vidiš kišu, snijeg, vjetar, maglu i poledicu duž puta, za čas kad ćeš tu biti.',
+      'Put na mapi u bojama, preko radara, i službena upozorenja za krajeve kroz koje prolaziš.',
+    ],
+  },
+  {
     verzija: '0.8.3',
     stavke: [
       'Ako nešto pukne, Hava to zapamti, a skroz dole se pojavi „Pošalji izvještaj o greškama“. Kopiraj i pošalji u Viber ili mailom.',
