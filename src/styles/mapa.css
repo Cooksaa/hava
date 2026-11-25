@@ -122,3 +122,57 @@ dialog.mapa .maplibregl-ctrl-attrib a {
 dialog.mapa .maplibregl-ctrl-attrib-button {
   filter: invert(1);
 }
+
+/* --- Zone za dron --- */
+
+dialog.mapa[data-rezim='zone'] .mapa__dno,
+dialog.mapa[data-rezim='radar'] .mapa__info {
+  display: none;
+}
+
+.mapa__info {
+  position: absolute;
+  left: max(var(--rub), env(safe-area-inset-left));
+  right: max(var(--rub), env(safe-area-inset-right));
+  bottom: calc(34px + env(safe-area-inset-bottom));
+  padding: 12px 16px 13px;
+  border-radius: 20px;
+}
+
+.mapa__legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 0.8125rem;
+}
+
+.mapa__legenda span,
+.mapa__zona-ime {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mapa__legenda i,
+.mapa__zona-ime i {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.mapa__zona-ime {
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.mapa__zona-sta {
+  margin-top: 4px;
+  font-size: 0.9375rem;
+}
+
+.mapa__napomena {
+  margin-top: 6px;
+  font-size: 0.8125rem;
+  color: var(--tekst-tihi);
+}

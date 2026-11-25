@@ -1,8 +1,10 @@
 import type { GeoJSONSource, Map as Karta, ImageSource } from 'maplibre-gl';
 import { lonLat, okviriZaMapu, type Okvir, type Radar } from '../api/radar';
+import { dohvatiZone, imaZone, NAJVECI_RADIJUS } from '../api/zone';
+import { NIVOI, zoneNaTacki, type Zona } from '../logic/zone';
 import { bojaKise } from '../logic/radar';
 import type { Mjesto } from '../tipovi';
-import { html } from './html';
+import { html, type Sirovo } from './html';
 import { ikonaUi } from './ikone';
 
 /*
@@ -23,14 +25,19 @@ const KORAK_MS = 550;
 const ZASTANI_MS = 1400;
 const BUDUCE_MIN = [10, 20, 30, 40, 50, 60];
 
+/** Boje nivoa kao u DJI Fly, za legendu. */
+const BOJA_NIVOA: Record<number, string> = { 0: '#FFCC00', 1: '#1088F2', 2: '#DE4329', 3: '#EE8815', 6: '#979797' };
+
 interface Kadar {
   sloj: string;
   vrijeme: number;
   vrsta: 'proslo' | 'snimak' | 'buduce';
 }
 
+export type RezimMape = 'radar' | 'zone';
+
 export interface RadarMapa {
-  otvori(m: Mjesto, radar: Radar | null): void;
+  otvori(m: Mjesto, radar: Radar | null, rezim?: RezimMape): void;
 }
 
 const satMin = (ms: number): string =>
@@ -95,6 +102,7 @@ export function stvoriRadarMapu(): RadarMapa {
         ${ikonaUi('zatvori')}
       </button>
     </div>
+    <div class="podloga mapa__info" data-zone-info aria-live="polite"></div>
     <div class="podloga mapa__dno">
       <button class="okruglo mapa__dugme" type="button" data-pusti aria-label="Pusti">${ikonaUi('pusti')}</button>
       <div class="mapa__vremenska">
@@ -111,6 +119,7 @@ export function stvoriRadarMapu(): RadarMapa {
   const klizac = dijalog.querySelector('.mapa__klizac') as HTMLInputElement;
   const pustiEl = dijalog.querySelector('[data-pusti]') as HTMLButtonElement;
   const mirno = matchMedia('(prefers-reduced-motion: reduce)');
+  const infoEl = dijalog.querySelector('[data-zone-info]') as HTMLElement;
 
   let karta: Karta | null = null;
   let kadrovi: Kadar[] = [];
@@ -165,7 +174,106 @@ export function stvoriRadarMapu(): RadarMapa {
   });
   dijalog.addEventListener('close', stani);
 
-  async function napuni(m: Mjesto, radar: Radar | null): Promise<void> {
+  /* --- Zone za dron (DJI) --- */
+
+  const zone = new Map<string, Zona>();
+  let cekaZone: ReturnType<typeof setTimeout> | null = null;
+
+  const legenda = (): Sirovo => html`
+    <p class="mapa__legenda">
+      ${[2, 1, 3, 0, 6].map((n) => html`<span><i style="background:${BOJA_NIVOA[n]}"></i>${NIVOI[n]!.ime}</span>`)}
+    </p>
+    <p class="mapa__napomena">Dodirni zonu. Prije leta provjeri u DJI Fly aplikaciji.</p>
+  `;
+
+  function nacrtajZone(kt: Karta): void {
+    const izvor = kt.getSource('zone') as GeoJSONSource | undefined;
+    izvor?.setData({
+      type: 'FeatureCollection',
+      features: [...zone.values()].map((z) => ({
+        type: 'Feature',
+        geometry: { type: 'Polygon', coordinates: [z.prsten] },
+        properties: { id: z.id, boja: z.boja, red: NIVOI[z.nivo]?.red ?? 9 },
+      })),
+    });
+  }
+
+  function postaviZone(kt: Karta): void {
+    const ispod = kt.getStyle().layers.find((s) => s.type === 'symbol')?.id;
+    kt.addSource('zone', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    kt.addLayer(
+      {
+        id: 'zone-povrsina',
+        type: 'fill',
+        source: 'zone',
+        // Ozbiljnije zone (manji "red") crtaju se iznad blažih.
+        layout: { 'fill-sort-key': ['-', 10, ['get', 'red']] },
+        paint: { 'fill-color': ['get', 'boja'], 'fill-opacity': 0.22 },
+      },
+      ispod,
+    );
+    kt.addLayer(
+      {
+        id: 'zone-ivica',
+        type: 'line',
+        source: 'zone',
+        paint: { 'line-color': ['get', 'boja'], 'line-width': 1.5, 'line-opacity': 0.9 },
+      },
+      ispod,
+    );
+    kt.on('moveend', () => {
+      if (dijalog.dataset.rezim !== 'zone') return;
+      if (cekaZone) clearTimeout(cekaZone);
+      cekaZone = setTimeout(() => void ucitajZone(kt), 350);
+    });
+    kt.on('click', (e) => {
+      if (dijalog.dataset.rezim !== 'zone') return;
+      const na = zoneNaTacki([...zone.values()], e.lngLat.lat, e.lngLat.lng);
+      const z = na[0];
+      if (!z) {
+        infoEl.innerHTML = html`<p class="mapa__zona-ime">Ovdje nema DJI zone.</p>${legenda()}`.html;
+        return;
+      }
+      const n = NIVOI[z.nivo]!;
+      const visina = z.nivo === 6 && z.visina ? ` Do ${z.visina} m.` : '';
+      const jos = na.slice(1).map((x) => `${x.ime} (${NIVOI[x.nivo]!.ime.toLowerCase()})`);
+      infoEl.innerHTML = html`
+        <p class="mapa__zona-ime"><i style="background:${z.boja}"></i>${z.ime}</p>
+        <p class="mapa__zona-sta">${n.ime}: ${n.znaci}.${visina}</p>
+        ${jos.length ? html`<p class="mapa__napomena">Još: ${jos.join(', ')}.</p>` : ''}
+        <p class="mapa__napomena">Prije leta provjeri u DJI Fly aplikaciji.</p>
+      `.html;
+    });
+  }
+
+  async function ucitajZone(kt: Karta): Promise<void> {
+    if (!imaZone()) {
+      opisEl.textContent = 'Zone se vide samo u Android aplikaciji.';
+      return;
+    }
+    if (kt.getZoom() < 9) {
+      opisEl.textContent = 'Približi mapu da vidiš zone.';
+      return;
+    }
+    const c = kt.getCenter();
+    const radijus = Math.min(NAJVECI_RADIJUS, c.distanceTo(kt.getBounds().getSouthWest()));
+    opisEl.textContent = 'Učitavam zone';
+    const r = await dohvatiZone(c.lat, c.lng, radijus);
+    if (!r) {
+      opisEl.textContent = 'DJI trenutno ne odgovara. Provjeri u DJI Fly.';
+      return;
+    }
+    for (const z of r.zone) zone.set(z.id, z);
+    nacrtajZone(kt);
+    const vidi = r.zone.length;
+    opisEl.textContent = r.stare
+      ? 'DJI ne odgovara: zone od jučer.'
+      : vidi
+        ? `${vidi} ${vidi === 1 ? 'zona' : vidi < 5 ? 'zone' : 'zona'} u blizini`
+        : 'Nema zona u blizini.';
+  }
+
+  async function napuni(m: Mjesto, radar: Radar | null, rezim: RezimMape): Promise<void> {
     const [maplibregl, { default: radnik }, okviri] = await Promise.all([
       import('maplibre-gl'),
       // Radnik (worker) mape kao zaseban fajl: MapLibre ga inače traži pored sebe, a Vite ga premjesti.
@@ -182,9 +290,9 @@ export function stvoriRadarMapu(): RadarMapa {
         container: kartaEl,
         style: STIL,
         center: [m.lon, m.lat],
-        zoom: 6.4,
+        zoom: rezim === 'zone' ? 11 : 6.4,
         minZoom: 4,
-        maxZoom: 9,
+        maxZoom: 14,
         attributionControl: {
           compact: true,
           customAttribution: 'Radar: <a href="https://www.rainviewer.com/">RainViewer</a>',
@@ -230,8 +338,9 @@ export function stvoriRadarMapu(): RadarMapa {
           'circle-stroke-color': '#0b1524',
         },
       });
+      postaviZone(kt);
     } else {
-      kt.jumpTo({ center: [m.lon, m.lat] });
+      kt.jumpTo({ center: [m.lon, m.lat], zoom: rezim === 'zone' ? 11 : 6.4 });
     }
     kt.resize();
     (kt.getSource('ja') as GeoJSONSource).setData({
@@ -261,6 +370,19 @@ export function stvoriRadarMapu(): RadarMapa {
         ispod
       );
     };
+
+    for (const id of ['zone-povrsina', 'zone-ivica']) {
+      if (kt.getLayer(id)) kt.setLayoutProperty(id, 'visibility', rezim === 'zone' ? 'visible' : 'none');
+    }
+    dijalog.dataset.buduce = 'false';
+
+    // Zone: radar se ne crta, samo zone (učitaju se kad se mapa pomjeri).
+    if (rezim === 'zone') {
+      stani();
+      vrijemeEl.textContent = 'Zone za dron';
+      void ucitajZone(kt);
+      return;
+    }
 
     if (okviri) {
       okviri.okviri.forEach((o: Okvir, i) => {
@@ -320,11 +442,14 @@ export function stvoriRadarMapu(): RadarMapa {
   }
 
   return {
-    otvori(m, radar) {
+    otvori(m, radar, rezim = 'radar') {
+      dijalog.dataset.rezim = rezim;
+      dijalog.setAttribute('aria-label', rezim === 'zone' ? 'Zone za dron' : 'Radar padavina');
       if (!dijalog.open) dijalog.showModal();
-      opisEl.textContent = 'Učitavam radar';
+      opisEl.textContent = rezim === 'zone' ? 'Učitavam zone' : 'Učitavam radar';
       vrijemeEl.textContent = '';
-      void napuni(m, radar).catch(() => {
+      infoEl.innerHTML = legenda().html;
+      void napuni(m, radar, rezim).catch(() => {
         opisEl.textContent = 'Mapa se nije učitala. Provjeri internet.';
       });
     },

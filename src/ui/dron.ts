@@ -9,6 +9,7 @@ import {
   type Svjetlo,
   type Visina,
 } from '../logic/dron';
+import { NIVOI, zonaRecenica, type Zona } from '../logic/zone';
 import type { Mjesto, Prognoza } from '../tipovi';
 import { html, type Sirovo } from './html';
 import { ikonaUi } from './ikone';
@@ -87,7 +88,19 @@ function traka(pr: DronPresuda): Sirovo {
   `;
 }
 
-export function prikaziDron(p: Prognoza | null, m: Mjesto, visine: Map<string, Visina> | null): Sirovo {
+/** Najozbiljnija zona na mjestu, kao kratak red na kartici. */
+function zonaRed(naMjestu: Zona[] | null): Sirovo {
+  const z = naMjestu?.[0];
+  if (!z) return html``;
+  return html`<p class="dron__zona"><i style="background:${z.boja}" aria-hidden="true"></i>DJI zona: ${z.ime}, ${NIVOI[z.nivo]!.ime.toLowerCase()}.</p>`;
+}
+
+export function prikaziDron(
+  p: Prognoza | null,
+  m: Mjesto,
+  visine: Map<string, Visina> | null,
+  naMjestu: Zona[] | null = null,
+): Sirovo {
   const d = p ? dronZaPrikaz(p, visine) : null;
   if (!p || !d) {
     return html`
@@ -119,13 +132,20 @@ export function prikaziDron(p: Prognoza | null, m: Mjesto, visine: Map<string, V
         ${presuda.dan === 'danas' ? 'Sad' : `Sutra u ${prvi.sat.sat}h`} na visini ${Math.round(prvi.visina)} km/h, udari
         ${Math.round(prvi.udari)} km/h.${zlatni ? ` ${zlatni}.` : ''}
       </p>
+      ${zonaRed(naMjestu)}
     </section>
   `;
 }
 
 const OCJENA: Record<Ocjena, string> = { zeleno: 'može', zuto: 'pazi', crveno: 'ne' };
 
-export function prikaziDronDetalje(p: Prognoza, m: Mjesto, visine: Map<string, Visina> | null): Sirovo {
+export function prikaziDronDetalje(
+  p: Prognoza,
+  m: Mjesto,
+  visine: Map<string, Visina> | null,
+  naMjestu: Zona[] | null = null,
+  imaZone = false,
+): Sirovo {
   const d = dronZaPrikaz(p, visine);
   if (!d) return html`<p class="list__glavno">Nema prognoze za dron.</p>`;
   const { presuda, model } = d;
@@ -178,6 +198,14 @@ export function prikaziDronDetalje(p: Prognoza, m: Mjesto, visine: Map<string, V
         Jutro: plavi sat ${raspon(s.plavi[0])}, zlatni ${raspon(s.zlatni[0])}.<br />
         Veče: zlatni sat ${raspon(s.zlatni[1])}, plavi ${raspon(s.plavi[1])}.
       </p>
+
+      ${imaZone
+        ? html`<h3 class="list__podnaslov">Zone za dron</h3>
+            <p class="list__detalj">
+              ${naMjestu === null ? 'Zone se učitavaju.' : (zonaRecenica(naMjestu) ?? `Na mjestu ${m.ime} nema DJI zone.`)}
+            </p>
+            <button class="dugme" type="button" data-zone-mapa>${ikonaUi('mapa')}<span>Zone na mapi</span></button>`
+        : ''}
 
       <p class="list__detalj dron-napomena">
         Ovo je prognoza, ne dozvola za let. Prije leta provjeri zone i ograničenja u DJI Fly aplikaciji.

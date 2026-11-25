@@ -805,3 +805,24 @@ button.grad:active {
 .dron-napomena {
   margin-top: 22px;
 }
+
+/* DJI zona na mjestu: tačka u boji zone (kao u DJI Fly). */
+.dron__zona {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 0.9375rem;
+}
+
+.dron__zona i {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  transform: translateY(-1px);
+}
+
+.dron-detalji .dugme {
+  margin-top: 12px;
+}

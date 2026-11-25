@@ -20,6 +20,8 @@ import { povuciZaOsvjezi } from './povuci';
 import { stvoriPretragu } from './pretraga';
 import { prikaziGradDetalje, prikaziPutujem } from './putujem';
 import { izaberiModel, prikaziDron, prikaziDronDetalje } from './dron';
+import { dohvatiZone, imaZone } from '../api/zone';
+import { zoneNaTacki, type Zona } from '../logic/zone';
 import { prikaziSada, prikaziSadaKostur } from './sada';
 import { prikaziSate } from './sati';
 import { prikaziUpozorenja, upozorenjaDetalji } from './upozorenja';
@@ -302,6 +304,7 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
 
   const list = stvoriList();
   const radarMapa = stvoriRadarMapu();
+  if (import.meta.env.DEV) (window as unknown as { __radarMapa: typeof radarMapa }).__radarMapa = radarMapa;
   let azuriranje: Azuriranje | null = null;
   let obavijesti: Obavijesti | null = null;
   pokaziNovosti(dio('novo'), list);
@@ -326,6 +329,7 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
     if (prije?.mjesto !== s.mjesto) {
       obavijesti?.mjesto(s.mjesto);
       iscrtajObavijesti();
+      ucitajZoneMjesta(s.mjesto);
     }
     iscrtajUpozorenja(s);
 
@@ -377,16 +381,38 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
 
   const dronEl = dio('dron');
   const iscrtajDron = (s: Stanje): void => {
-    dronEl.innerHTML = prikaziDron(s.status === 'greska' ? null : zaPrikaz(s), s.mjesto, s.visine).html;
+    dronEl.innerHTML = prikaziDron(s.status === 'greska' ? null : zaPrikaz(s), s.mjesto, s.visine, zoneMjesta).html;
+  };
+  /** DJI zone na samom mjestu (Android), za karticu drona. null = još nije stiglo. */
+  let zoneMjesta: Zona[] | null = null;
+  function ucitajZoneMjesta(m: Mjesto): void {
+    zoneMjesta = null;
+    if (!imaZone()) return;
+    void dohvatiZone(m.lat, m.lon, 5000).then((r) => {
+      if (skladiste.daj().mjesto !== m) return;
+      zoneMjesta = r ? zoneNaTacki(r.zone, m.lat, m.lon) : [];
+      iscrtajDron(skladiste.daj());
+    });
+  }
+  const dronDetalji = (s: Stanje): Sirovo | null => {
+    const p = zaPrikaz(s);
+    return p ? prikaziDronDetalje(p, s.mjesto, s.visine, zoneMjesta, imaZone()) : null;
   };
   /** Dron izabran ili promijenjen u listu: kartica i list se odmah preračunaju. */
   const promijeniDron = (id: string): void => {
     izaberiModel(id);
     const s = skladiste.daj();
     iscrtajDron(s);
-    const p = zaPrikaz(s);
-    if (p) list.otvori('Dron', prikaziDronDetalje(p, s.mjesto, s.visine));
+    const d = dronDetalji(s);
+    if (d) list.otvori('Dron', d);
   };
+  // "Zone na mapi" iz lista drona (list nije u korijenu).
+  document.addEventListener('click', (e) => {
+    if (!(e.target as Element).closest('[data-zone-mapa]')) return;
+    list.zatvori();
+    const s = skladiste.daj();
+    radarMapa.otvori(s.mjesto, s.radar, 'zone');
+  });
   document.addEventListener('change', (e) => {
     const el = e.target as HTMLElement;
     if (el.matches('[data-dron-model]')) {
@@ -433,8 +459,8 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
         break;
       }
       case 'dron': {
-        const p = zaPrikaz(s);
-        if (p) list.otvori('Dron', prikaziDronDetalje(p, s.mjesto, s.visine));
+        const d = dronDetalji(s);
+        if (d) list.otvori('Dron', d);
         break;
       }
       case 'radar':
