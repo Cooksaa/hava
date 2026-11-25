@@ -8,11 +8,15 @@ import './styles/kartice.css';
 import './styles/stanja.css';
 import './styles/mapa.css';
 
+import { pokreniDnevnik } from './dnevnik';
 import { ucitajMjesto } from './api/cache';
 import { POCETNO_MJESTO } from './config';
 import { stvoriSkladiste } from './state';
 import { pokreniApp } from './ui/app';
 import { ubaciIkone } from './ui/ikone';
+
+// Prvo dnevnik grešaka, da uhvati i ono što pukne pri pokretanju.
+pokreniDnevnik();
 
 const korijen = document.querySelector<HTMLElement>('#app');
 if (!korijen) throw new Error('Nema #app elementa.');

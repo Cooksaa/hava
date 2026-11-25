@@ -3,6 +3,7 @@ import { BackgroundRunner } from '@capacitor/background-runner';
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { citajStanje, dohvatiIzdanje, pisiStanje, type Zapamceno } from './api/azuriranje';
+import { postaviApk } from './dnevnik';
 import { odlukaAzuriranja } from './logic/azuriranje';
 import { AERODROMI, zadnjaMjerenja, type MetarZapis } from './logic/mjerenje';
 import type { MaZapis } from './logic/upozorenja';
@@ -16,6 +17,7 @@ export function pokreniAndroid(app: Aplikacija): void {
   // Javi da je ova verzija web dijela proradila. Ako se nova verzija ne javi
   // u 10 s (pokvaren paket), aplikacija se sama vrati na prethodnu.
   void CapacitorUpdater.notifyAppReady();
+  void App.getInfo().then((i) => postaviApk(i.version)).catch(() => undefined);
 
   // Dugme ili pokret Nazad: prvo zatvori otvoreni prozor (detalji, pretraga),
   // tek kad ničega nema, spusti aplikaciju kao što to radi Home.

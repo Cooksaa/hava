@@ -7,6 +7,12 @@ import type { Novost } from './logic/novosti';
  */
 export const NOVOSTI: Novost[] = [
   {
+    verzija: '0.8.3',
+    stavke: [
+      'Ako nešto pukne, Hava to zapamti, a skroz dole se pojavi „Pošalji izvještaj o greškama“. Kopiraj i pošalji u Viber ili mailom.',
+    ],
+  },
+  {
     verzija: '0.8.2',
     stavke: ['Popravljeno: dodir bilo gdje više ne otvara karticu Dron.'],
   },

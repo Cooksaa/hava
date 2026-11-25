@@ -273,3 +273,47 @@ html {
     animation-duration: 1600ms;
   }
 }
+
+/* Dnevnik grešaka: tiho, uz verziju; vidi se samo kad ima šta poslati. */
+.izvor__izvjestaj {
+  position: relative;
+  color: var(--pazi);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.izvor__izvjestaj::after {
+  content: '';
+  position: absolute;
+  inset: -14px -8px;
+}
+
+.izvor__izvjestaj[hidden] {
+  display: none;
+}
+
+.izvjestaj {
+  margin-top: 14px;
+  max-height: 180px;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgb(0 0 0 / 0.25);
+  font: 0.75rem/1.45 ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--tekst-tihi);
+}
+
+.izvjestaj__dugmad {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.izvjestaj__dugmad .dugme {
+  margin-top: 0;
+  text-decoration: none;
+}

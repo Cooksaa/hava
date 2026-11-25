@@ -28,6 +28,8 @@ import { prikaziUpozorenja, upozorenjaDetalji } from './upozorenja';
 import { prikaziVes, prikaziVesDetalje } from './ves';
 import { kisaZaPrikaz, prikaziKisuSad } from './kisaSad';
 import { stvoriRadarMapu } from './radarMapa';
+import { apkVerzija, obrisi, prati as pratiDnevnik, sviZapisi } from '../dnevnik';
+import { brojGresaka, izvjestaj, uredjaj } from '../logic/dnevnik';
 
 /* Sastavlja ekran i ponovo iscrta samo dio čije se stanje promijenilo. */
 
@@ -236,6 +238,42 @@ function azuriranjeDetalji(a: Azuriranje): Sirovo {
   `;
 }
 
+/** Kome ide izvještaj: kontakt sa stranice autora (alemcoksa.com). */
+const MAIL_IZVJESTAJ = 'hello@alemcoksa.com';
+
+function tekstIzvjestaja(): string {
+  return izvjestaj(sviZapisi(), {
+    verzija: __VERSIJA__,
+    apk: apkVerzija(),
+    uredjaj: uredjaj(navigator.userAgent),
+    sad: Date.now(),
+  });
+}
+
+function izvjestajDetalji(kopirano = false): Sirovo {
+  const z = sviZapisi();
+  if (!z.length) {
+    return html`<p class="list__glavno">Nema zapisanih grešaka.</p>`;
+  }
+  const tekst = tekstIzvjestaja();
+  const mail = `mailto:${MAIL_IZVJESTAJ}?subject=${encodeURIComponent(`Hava ${__VERSIJA__}: greške`)}&body=${encodeURIComponent(tekst.slice(0, 1800))}`;
+  const ukupno = z.reduce((n, x) => n + x.puta, 0);
+  return html`
+    <p class="list__glavno">Hava je zapisala ${brojGresaka(ukupno)}.</p>
+    <p class="list__detalj">
+      Pošalji izvještaj i popravit ćemo. U njemu su samo greške, verzija i model telefona: bez lokacije i ličnih
+      podataka.
+    </p>
+    <pre class="izvjestaj">${tekst}</pre>
+    <div class="izvjestaj__dugmad">
+      <button class="dugme" type="button" data-izvjestaj="kopiraj">${kopirano ? 'Kopirano' : 'Kopiraj'}</button>
+      <a class="dugme" href="${mail}">Pošalji mailom</a>
+      <button class="obavijesti-poziv__ne" type="button" data-izvjestaj="obrisi">Obriši</button>
+    </div>
+    ${kopirano ? html`<p class="list__detalj">Zalijepi u Viber, WhatsApp ili poruku.</p>` : ''}
+  `;
+}
+
 export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikacija {
   korijen.innerHTML = html`
     <div class="nebo" aria-hidden="true"></div>
@@ -272,6 +310,9 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
               Hava ${__VERSIJA__}
             </button>`
           : ''}
+        <button class="izvor__izvjestaj" type="button" data-akcija="izvjestaj" aria-haspopup="dialog" hidden>
+          Pošalji izvještaj o greškama
+        </button>
         <span>
           Podaci:
           <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>,
@@ -406,6 +447,27 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
     const d = dronDetalji(s);
     if (d) list.otvori('Dron', d);
   };
+  // Dnevnik grešaka: link pod verzijom se pokaže kad ima šta poslati.
+  const izvjestajEl = korijen.querySelector<HTMLButtonElement>('[data-akcija="izvjestaj"]')!;
+  const iscrtajIzvjestaj = (): void => {
+    izvjestajEl.hidden = sviZapisi().length === 0;
+  };
+  pratiDnevnik(iscrtajIzvjestaj);
+  iscrtajIzvjestaj();
+  document.addEventListener('click', (e) => {
+    const d = (e.target as Element).closest<HTMLElement>('[data-izvjestaj]');
+    if (!d) return;
+    if (d.dataset.izvjestaj === 'kopiraj') {
+      void navigator.clipboard
+        ?.writeText(tekstIzvjestaja())
+        .then(() => list.otvori('Izvještaj o greškama', izvjestajDetalji(true)))
+        .catch(() => undefined);
+    } else if (d.dataset.izvjestaj === 'obrisi') {
+      obrisi();
+      list.zatvori();
+    }
+  });
+
   // "Zone na mapi" iz lista drona (list nije u korijenu).
   document.addEventListener('click', (e) => {
     if (!(e.target as Element).closest('[data-zone-mapa]')) return;
@@ -463,6 +525,9 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
         if (d) list.otvori('Dron', d);
         break;
       }
+      case 'izvjestaj':
+        list.otvori('Izvještaj o greškama', izvjestajDetalji());
+        break;
       case 'radar':
         radarMapa.otvori(s.mjesto, s.radar);
         break;
