@@ -4,7 +4,11 @@ import type { Prognoza } from '../tipovi';
 import { html, type Sirovo } from './html';
 import { ikonaVremena, ikonaZaKod } from './ikone';
 
-/* "Sada": temperatura i jedna rečenica, direktno na nebu. */
+/*
+ * "Sada": temperatura i jedna rečenica, direktno na nebu.
+ * Raspon za danas uključuje i temperaturu sad: kad je izmjerena na aerodromu (npr. 8°),
+ * a model za dan kaže 13–17°, bez toga bi pisalo "8°" i "Danas od 13°".
+ */
 
 export function prikaziSada(p: Prognoza, jadran = false, zrak: ZrakSad | null = null): Sirovo {
   const danas = p.dani[0];
@@ -15,15 +19,21 @@ export function prikaziSada(p: Prognoza, jadran = false, zrak: ZrakSad | null = 
         ${ikonaVremena(ikonaZaKod(p.sada.kod, p.sada.dan), 'sada__ikona')}
       </div>
       <p class="sada__opis">${sadaRecenica(p.sada, jadran)}</p>
-      ${danas ? html`<p class="sada__raspon broj">${rasponRecenica(danas)}</p>` : ''}
+      ${danas
+        ? html`<p class="sada__raspon broj">
+            ${rasponRecenica({
+              ...danas,
+              tMin: Math.min(danas.tMin, p.sada.temp),
+              tMax: Math.max(danas.tMax, p.sada.temp),
+            })}
+          </p>`
+        : ''}
       ${zrak
         ? html`<p class="sada__zrak" data-k="${zrak.kategorija}">
             <i class="sada__tacka" aria-hidden="true"></i>${zrak.recenica}${zrak.savjet ? ` ${zrak.savjet}` : ''}
           </p>`
         : ''}
-      ${p.izmjereno
-        ? html`<p class="sada__izvor broj">Izmjereno: ${p.izmjereno.gdje}, ${p.izmjereno.kad}</p>`
-        : ''}
+      ${p.izmjereno ? html`<p class="sada__izvor broj">Izmjereno: ${p.izmjereno.gdje}, ${p.izmjereno.kad}</p>` : ''}
     </section>
   `;
 }

@@ -7,6 +7,10 @@ import type { Novost } from './logic/novosti';
  */
 export const NOVOSTI: Novost[] = [
   {
+    verzija: '0.9.1',
+    stavke: ['„Danas od … do …“ sad uključuje i izmjerenu temperaturu, i kad model kaže drugačije.'],
+  },
+  {
     verzija: '0.9.0',
     stavke: [
       'Putujem: upiši kuda ideš i kad krećeš, pa vidiš kišu, snijeg, vjetar, maglu i poledicu duž puta, za čas kad ćeš tu biti.',
