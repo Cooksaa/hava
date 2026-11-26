@@ -7,6 +7,15 @@ import type { Novost } from './logic/novosti';
  */
 export const NOVOSTI: Novost[] = [
   {
+    verzija: '1.1.0',
+    stavke: [
+      'Prskanje voćnjaka i vinograda: kad je mirno i bez kiše 6 sati poslije.',
+      'Roštilj i vani: kakvo je veče napolju.',
+      'Planina: prognoza za vrh (Velež, Prenj, Čvrsnica, Bjelašnica…), ne za grad u dolini.',
+      'Ispod aktivnosti „Uredi aktivnosti“: ostavi samo ono što ti treba.',
+    ],
+  },
+  {
     verzija: '1.0.4',
     stavke: ['Widget koristi cijelu širinu i na Xiaomiju: rečenice se ne prelamaju prerano.'],
   },

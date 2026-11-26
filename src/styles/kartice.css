@@ -1049,3 +1049,48 @@ button.grad:active {
 .put-napomena {
   margin-top: 18px;
 }
+
+/* --- Aktivnosti: prskanje, roštilj, planina (ui/aktivnosti.ts) --- */
+
+.aktivnosti__uredi {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 20px;
+  border-top: 1px solid rgb(255 255 255 / 0.1);
+  color: var(--tekst-tihi);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.aktivnosti__uredi .ikona {
+  font-size: 16px;
+}
+
+.aktivnosti-izbor {
+  margin-top: 12px;
+}
+
+.aktivnosti-izbor__red {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  border-top: 1px solid rgb(255 255 255 / 0.08);
+  font-size: 0.9375rem;
+  color: var(--tekst-tihi);
+}
+
+.aktivnosti-izbor__red strong {
+  color: var(--tekst);
+  font-weight: 600;
+}
+
+.aktivnosti-izbor__red input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  accent-color: var(--moze);
+}

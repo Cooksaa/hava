@@ -20,6 +20,18 @@ import { povuciZaOsvjezi } from './povuci';
 import { stvoriPretragu } from './pretraga';
 import { prikaziGradDetalje, prikaziPutujem } from './putujem';
 import { izaberiModel, prikaziDron, prikaziDronDetalje } from './dron';
+import {
+  aktivnostDetalji,
+  izaberiVrh,
+  izabraneAktivnosti,
+  izabraniVrh,
+  prikaziAktivnosti,
+  sacuvajAktivnosti,
+  urediAktivnosti,
+  type IdAktivnosti,
+} from './aktivnosti';
+import { dohvatiVrh } from '../api/planina';
+import type { SatVrha, Vrh } from '../logic/planina';
 import { dohvatiZone, imaZone } from '../api/zone';
 import { zoneNaTacki, type Zona } from '../logic/zone';
 import { prikaziSada, prikaziSadaKostur } from './sada';
@@ -308,6 +320,10 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
         <div class="podloga aktivnosti">
           <div data-dio="putujem"></div>
           <div data-dio="dron"></div>
+          <div data-dio="aktivnosti"></div>
+          <button class="aktivnosti__uredi" type="button" data-akcija="uredi-aktivnosti" aria-haspopup="dialog">
+            ${ikonaUi('postavke')}<span>Uredi aktivnosti</span>
+          </button>
         </div>
       </main>
       <div data-dio="obavijesti"></div>
@@ -379,6 +395,14 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
       obavijesti?.mjesto(s.mjesto);
       iscrtajObavijesti();
       ucitajZoneMjesta(s.mjesto);
+      // Planina: najbliži vrh novom mjestu (osim ako je vrh izabran ručno).
+      if (prije) {
+        const v = izabraniVrh(s.mjesto);
+        if (v.id !== vrh.vrh.id) {
+          vrh = { vrh: v, sati: null, kad: 0 };
+          ucitajVrh();
+        }
+      }
       if (prije && put) void izracunajPut();
     }
     iscrtajUpozorenja(s);
@@ -425,6 +449,10 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
     }
 
     if (promijenjenaPrognoza || prije?.visine !== s.visine) iscrtajDron(s);
+    if (promijenjenaPrognoza) {
+      iscrtajAktivnosti(s);
+      ucitajVrh();
+    }
     if (promijenjenaPrognoza) posaljiWidgetu(s);
     // Put se računa jednom pri pokretanju, pa kad je stariji od 15 min (nova prognoza).
     const putStar =
@@ -526,7 +554,31 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
   }
 
   const dronEl = dio('dron');
+  /* --- Aktivnosti: prskanje, roštilj, planina (i izbor šta se vidi) --- */
+  const aktEl = dio('aktivnosti');
+  let aktivnosti = izabraneAktivnosti();
+  let vrh: { vrh: Vrh; sati: SatVrha[] | null; kad: number } = { vrh: izabraniVrh(skladiste.daj().mjesto), sati: null, kad: 0 };
+  const iscrtajAktivnosti = (s: Stanje): void => {
+    aktEl.innerHTML = prikaziAktivnosti(aktivnosti, s.status === 'greska' ? null : zaPrikaz(s), s.mjesto, vrh).html;
+  };
+  function ucitajVrh(prisili = false): void {
+    if (!aktivnosti.includes('planina')) return;
+    if (!prisili && vrh.sati && Date.now() - vrh.kad < 30 * 60e3) return;
+    const v = vrh.vrh;
+    void dohvatiVrh(v)
+      .then((sati) => {
+        if (vrh.vrh !== v) return;
+        vrh = { vrh: v, sati, kad: Date.now() };
+        iscrtajAktivnosti(skladiste.daj());
+      })
+      .catch(() => undefined);
+  }
+
   const iscrtajDron = (s: Stanje): void => {
+    if (!aktivnosti.includes('dron')) {
+      dronEl.innerHTML = '';
+      return;
+    }
     dronEl.innerHTML = prikaziDron(s.status === 'greska' ? null : zaPrikaz(s), s.mjesto, s.visine, zoneMjesta).html;
   };
   /** DJI zone na samom mjestu (Android), za karticu drona. null = još nije stiglo. */
@@ -590,6 +642,25 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
   });
   document.addEventListener('change', (e) => {
     const el = e.target as HTMLElement;
+    // Uredi aktivnosti: kvačica uključi ili sakrije karticu.
+    if (el.matches('[data-aktivnost]')) {
+      const id = (el as HTMLInputElement).dataset.aktivnost as IdAktivnosti;
+      aktivnosti = (el as HTMLInputElement).checked ? [...new Set([...aktivnosti, id])] : aktivnosti.filter((x) => x !== id);
+      sacuvajAktivnosti(aktivnosti);
+      const st = skladiste.daj();
+      iscrtajDron(st);
+      iscrtajAktivnosti(st);
+      ucitajVrh();
+      return;
+    }
+    if (el.matches('[data-vrh]')) {
+      izaberiVrh((el as HTMLSelectElement).value);
+      vrh = { vrh: izabraniVrh(skladiste.daj().mjesto), sati: null, kad: 0 };
+      iscrtajAktivnosti(skladiste.daj());
+      ucitajVrh(true);
+      list.zatvori();
+      return;
+    }
     if (el.matches('[data-dron-model]')) {
       const v = (el as HTMLSelectElement).value;
       // "Drugi": počni od 10 m/s, pa korisnik upiše svoj broj.
@@ -657,6 +728,19 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
       case 'put':
         if (put) list.otvori('Putujem', prikaziPutDetalje(put, s.mjesto, true));
         break;
+      case 'uredi-aktivnosti':
+        list.otvori('Aktivnosti', urediAktivnosti(aktivnosti));
+        break;
+      case 'akt-prskanje':
+      case 'akt-rostilj':
+      case 'akt-planina': {
+        const id = cilj.dataset.akcija!.slice(4) as IdAktivnosti;
+        const p = zaPrikaz(s);
+        const d = p ? aktivnostDetalji(id, p, s.mjesto, vrh) : null;
+        const naslov = id === 'prskanje' ? 'Prskanje' : id === 'rostilj' ? 'Roštilj i vani' : 'Planina';
+        if (d) list.otvori(naslov, d);
+        break;
+      }
       case 'izvjestaj':
         list.otvori('Izvještaj o greškama', izvjestajDetalji());
         break;

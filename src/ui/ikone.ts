@@ -45,6 +45,10 @@ import mapa from '@phosphor-icons/core/assets/regular/map-trifold.svg?raw';
 import pusti from '@phosphor-icons/core/assets/fill/play-fill.svg?raw';
 import pauza from '@phosphor-icons/core/assets/fill/pause-fill.svg?raw';
 import zvono from '@phosphor-icons/core/assets/regular/bell-ringing.svg?raw';
+import biljka from '@phosphor-icons/core/assets/regular/plant.svg?raw';
+import vatra from '@phosphor-icons/core/assets/regular/flame.svg?raw';
+import planina from '@phosphor-icons/core/assets/regular/mountains.svg?raw';
+import postavke from '@phosphor-icons/core/assets/regular/sliders-horizontal.svg?raw';
 
 const VRIJEME = {
   'vedro-dan': vedroDan,
@@ -86,6 +90,10 @@ const UI = {
   pusti,
   pauza,
   zvono,
+  biljka,
+  vatra,
+  planina,
+  postavke,
 } as const;
 
 export type IkonaVremena = keyof typeof VRIJEME;
