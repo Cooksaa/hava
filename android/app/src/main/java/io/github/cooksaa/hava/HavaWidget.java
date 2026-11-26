@@ -76,7 +76,9 @@ public class HavaWidget extends AppWidgetProvider {
         int sirinaDp = Math.max(
             op.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0),
             op.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0));
-        if (sirinaDp <= 0) sirinaDp = 300;
+        // Xiaomijev početni ekran veličinu uopšte ne javlja: onda širina ekrana minus rubovi
+        // (widget od 3–4 polja ide skoro preko cijelog ekrana). Manji widget tekst samo smanji.
+        if (sirinaDp <= 0) sirinaDp = Math.round(dm.widthPixels / dm.density) - 48;
         int puna = px(dm, sirinaDp - 38);
         int lijevo = puna - px(dm, 52); // pored ikone
 
