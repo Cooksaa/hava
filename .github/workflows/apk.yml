@@ -184,6 +184,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP/Hava-$VERZIJA.apk" "$WEB_PAKET" "$RUNNER_TEMP/izdanje.json" \
+          # Hava.apk: isti fajl pod stalnim imenom, za link na stranici (releases/latest/download/Hava.apk).
+          mkdir -p "$RUNNER_TEMP/stalno"
+          cp "$RUNNER_TEMP/Hava-$VERZIJA.apk" "$RUNNER_TEMP/stalno/Hava.apk"
+          gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP/Hava-$VERZIJA.apk" "$RUNNER_TEMP/stalno/Hava.apk" "$WEB_PAKET" "$RUNNER_TEMP/izdanje.json" \
             --title "Hava $VERZIJA" \
             --notes "Android aplikacija. Preuzmi Hava-$VERZIJA.apk na mobitelu i otvori ga. Ako Android pita, dozvoli instalaciju iz ovog izvora. Web verzija: https://cooksaa.github.io/hava/"
