@@ -10,3 +10,6 @@ Thumbs.db
 *.jks
 *.keystore
 *.pfx
+
+# Vercel izlaz (npm run server)
+.vercel

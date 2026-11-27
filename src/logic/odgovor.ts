@@ -15,7 +15,7 @@ import type { Mjesto, Prognoza } from '../tipovi';
 /*
  * Odgovor na pitanje (pitanja.ts) jednom rečenicom, od istih rečenica koje aplikacija
  * pokazuje na ekranu. Ne zna odakle dolaze podaci: aplikacija daje ono što već ima
- * (radar, visine, izabrani dron), server (api/pitaj.ts) dohvata sam. Zato radi i u
+ * (radar, visine, izabrani dron), server (server/pitaj.ts) dohvata sam. Zato radi i u
  * pregledniku i na serveru.
  */
 
