@@ -1,6 +1,7 @@
 import {
   MODELI,
   PODRAZUMIJEVANI,
+  modelPoId,
   presudaDrona,
   zlatniPlavi,
   type DronPresuda,
@@ -22,12 +23,7 @@ const NIVO: Record<Ocjena, 'moze' | 'pazi' | 'nemoj'> = { zeleno: 'moze', zuto: 
 /** Izabrani dron. "drugi:9.5" = vlastiti otpor u m/s. */
 export function izabraniModel(): ModelDrona {
   try {
-    const id = localStorage.getItem(KLJUC);
-    if (id?.startsWith('drugi:')) {
-      const ms = Number(id.slice(6));
-      if (ms >= 3 && ms <= 25) return { id, ime: `Dron do ${String(ms).replace('.', ',')} m/s`, otpor: ms };
-    }
-    return MODELI.find((m) => m.id === id) ?? PODRAZUMIJEVANI;
+    return modelPoId(localStorage.getItem(KLJUC));
   } catch {
     return PODRAZUMIJEVANI;
   }

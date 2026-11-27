@@ -14,5 +14,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "vite.config.ts", "vite.pozadina.config.ts", "pwa-assets.config.ts", "capacitor.config.ts"]
+  "include": ["src", "api", "vite.config.ts", "vite.pozadina.config.ts", "pwa-assets.config.ts", "capacitor.config.ts"]
 }

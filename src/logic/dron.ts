@@ -34,6 +34,15 @@ export const MODELI: ModelDrona[] = [
 
 export const PODRAZUMIJEVANI = MODELI[0]!;
 
+/** Model po id-u ("air-3", ili "drugi:8" za vlastiti otpor u m/s); nepoznato → podrazumijevani. */
+export function modelPoId(id: string | null | undefined): ModelDrona {
+  if (id?.startsWith('drugi:')) {
+    const ms = Number(id.slice(6));
+    if (ms >= 3 && ms <= 25) return { id, ime: `Dron do ${String(ms).replace('.', ',')} m/s`, otpor: ms };
+  }
+  return MODELI.find((m) => m.id === id) ?? PODRAZUMIJEVANI;
+}
+
 export type Ocjena = 'zeleno' | 'zuto' | 'crveno';
 
 /** Vjetar na visini za jedan sat (km/h). */

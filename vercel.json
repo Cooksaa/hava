@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "",
+  "buildCommand": "",
+  "outputDirectory": "server/javno",
+  "functions": {
+    "api/pitaj.ts": { "maxDuration": 15 }
+  },
+  "regions": ["fra1"],
+  "redirects": [{ "source": "/", "destination": "https://alemcoksa.com/aplikacije/", "permanent": false }]
+}
