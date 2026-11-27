@@ -1,0 +1,51 @@
+# Svaka 2 sata: koliko radar "minut po minut" pogađa (scripts/radar-provjera.ts).
+# RainViewer čuva samo 2 sata snimaka, pa se provjera radi ovako često, a zbir se
+# dopisuje u granu "podaci" (radar/GGGG-MM.jsonl). Sedmični pregled:
+#   node scripts/radar-analiza.mjs   (u checkoutu grane podaci)
+name: Radar provjera
+
+on:
+  schedule:
+    - cron: '23 */2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: radar-provjera
+  cancel-in-progress: false
+
+jobs:
+  provjera:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Provjera
+        run: |
+          npx rolldown scripts/radar-provjera.ts --platform node --format esm -o "$RUNNER_TEMP/provjera.mjs"
+          node "$RUNNER_TEMP/provjera.mjs" > "$RUNNER_TEMP/red.json"
+          cat "$RUNNER_TEMP/red.json"
+      - name: Upis u granu podaci
+        run: |
+          git config user.name "hava-provjera"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code origin podaci > /dev/null; then
+            git fetch origin podaci
+            git worktree add "$RUNNER_TEMP/podaci" podaci
+          else
+            git worktree add --orphan -b podaci "$RUNNER_TEMP/podaci"
+          fi
+          cd "$RUNNER_TEMP/podaci"
+          mkdir -p radar
+          cat "$RUNNER_TEMP/red.json" >> "radar/$(date -u +%Y-%m).jsonl"
+          cp "$GITHUB_WORKSPACE/scripts/radar-analiza.mjs" .
+          git add -A
+          git commit -q -m "Radar provjera $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q origin podaci
+          node radar-analiza.mjs >> "$GITHUB_STEP_SUMMARY"
