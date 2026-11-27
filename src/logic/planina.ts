@@ -80,13 +80,23 @@ export interface PresudaVrha {
 
 /**
  * "Bjelašnica: lijepo do 14h, na vrhu −3°." / "Bjelašnica danas ne: udari 70 km/h."
- * Gleda dan od 7 do 17h (danas od sad; poslije 15h sutra).
+ * Gleda dan od izlaska do zalaska sunca (bez podataka o suncu 7–17h); danas od sad,
+ * a kad ostanu manje od 3 sata svjetla, sutra.
  */
-export function presudaVrha(vrh: Vrh, sati: SatVrha[], sad: string): PresudaVrha | null {
+export function presudaVrha(
+  vrh: Vrh,
+  sati: SatVrha[],
+  sad: string,
+  dani: { datum: string; izlazak: string; zalazak: string }[] = [],
+): PresudaVrha | null {
   const sadKljuc = `${sad.slice(0, 13)}:00`;
   const datumi = [...new Set(sati.map((s) => s.datum))];
   for (const [i, datum] of datumi.slice(0, 2).entries()) {
-    const dan = sati.filter((s) => s.datum === datum && s.sat >= 7 && s.sat < 17 && (i > 0 || s.vrijeme >= sadKljuc));
+    const d = dani.find((x) => x.datum === datum);
+    // Izlazak 6:40 → od 7h; zalazak 16:20 → do 16h (sat u kojem zalazi se ne računa).
+    const od = d ? Number(d.izlazak.slice(11, 13)) + (Number(d.izlazak.slice(14, 16)) > 30 ? 1 : 0) : 7;
+    const doSata = d ? Number(d.zalazak.slice(11, 13)) : 17;
+    const dan = sati.filter((s) => s.datum === datum && s.sat >= od && s.sat < doSata && (i > 0 || s.vrijeme >= sadKljuc));
     if (i === 0 && dan.length < 3) continue;
     if (!dan.length) continue;
     const o = dan.map(ocijeniVrh);

@@ -130,7 +130,7 @@ export function prikaziAktivnosti(
     if (r) dijelovi.push(kartica({ id: 'rostilj', ikona: 'vatra', naslov: 'Roštilj i vani', ocjena: r.ocjena, glavno: r.glavno, sati: r.sati }));
   }
   if (ids.includes('planina')) {
-    const r = vrh.sati ? presudaVrha(vrh.vrh, vrh.sati, p.sada.vrijeme) : null;
+    const r = vrh.sati ? presudaVrha(vrh.vrh, vrh.sati, p.sada.vrijeme, p.dani) : null;
     dijelovi.push(
       kartica({
         id: 'planina',
@@ -192,7 +192,7 @@ export function aktivnostDetalji(id: IdAktivnosti, p: Prognoza, m: Mjesto, vrh: 
     `;
   }
   if (id === 'planina') {
-    const r = vrh.sati ? presudaVrha(vrh.vrh, vrh.sati, p.sada.vrijeme) : null;
+    const r = vrh.sati ? presudaVrha(vrh.vrh, vrh.sati, p.sada.vrijeme, p.dani) : null;
     return html`
       <div class="dron-detalji" ${r ? html`data-nivo="${NIVO[r.ocjena]}"` : ''}>
         <p class="list__glavno">${r?.glavno ?? 'Prognoza za vrh se učitava.'}</p>

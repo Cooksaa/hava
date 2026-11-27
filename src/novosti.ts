@@ -7,6 +7,13 @@ import type { Novost } from './logic/novosti';
  */
 export const NOVOSTI: Novost[] = [
   {
+    verzija: '1.2.0',
+    stavke: [
+      'Hava odgovara na pitanja jednom rečenicom: „Mogu li danas dići dron?“, „Pada li u Čapljini?“, „Kad da palim mašinu?“. Za sada preko adrese, a uskoro i glasom.',
+      'Planina gleda stvarni izlazak i zalazak sunca.',
+    ],
+  },
+  {
     verzija: '1.1.0',
     stavke: [
       'Prskanje voćnjaka i vinograda: kad je mirno i bez kiše 6 sati poslije.',

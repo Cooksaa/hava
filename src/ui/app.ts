@@ -40,6 +40,8 @@ import { prikaziUpozorenja, upozorenjaDetalji } from './upozorenja';
 import { prikaziVes, prikaziVesDetalje } from './ves';
 import { kisaZaPrikaz, prikaziKisuSad } from './kisaSad';
 import { stvoriRadarMapu } from './radarMapa';
+import { prepoznaj } from '../logic/pitanja';
+import { odgovori } from './pitanja';
 import { kadroviWidgeta, satiIzPrognoze, type PodaciWidgeta } from '../logic/widget';
 import { procijeniVes } from '../logic/ves';
 import { vesRecenica } from '../tekst';
@@ -168,6 +170,8 @@ export interface Aplikacija {
   postaviObavijesti(o: Obavijesti): void;
   /** Android: widget dobija podatke kad stigne nova prognoza. */
   postaviWidget(fn: (p: PodaciWidgeta) => void): void;
+  /** Pitanje za asistenta ("Mogu li danas dići dron?"): odgovor u listu i kao tekst. */
+  pitaj(tekst: string): Promise<string>;
 }
 
 export type StanjeObavijesti = 'nije-birano' | 'ukljuceno' | 'iskljuceno' | 'odbijeno';
@@ -454,6 +458,12 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
       ucitajVrh();
     }
     if (promijenjenaPrognoza) posaljiWidgetu(s);
+    // ?pitaj=… : odgovori čim stigne prognoza (jednom).
+    if (pitanjeIzAdrese && zaPrikaz(s)) {
+      const t = pitanjeIzAdrese;
+      pitanjeIzAdrese = null;
+      void pitaj(t);
+    }
     // Put se računa jednom pri pokretanju, pa kad je stariji od 15 min (nova prognoza).
     const putStar =
       put !== null &&
@@ -537,6 +547,22 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
     'Kuda putuješ?',
     'put-naslov',
   );
+
+  /* --- Pitanja (asistent, ?pitaj= u adresi) --- */
+  async function pitaj(tekst: string): Promise<string> {
+    const s = skladiste.daj();
+    const odg = await odgovori(prepoznaj(tekst), {
+      mjesto: s.mjesto,
+      prognoza: zaPrikaz(s),
+      radar: s.radar,
+      visine: s.visine,
+      zrak: s.zrak,
+      upozorenja: upozorenjaZaMjesto,
+    });
+    list.otvori(tekst.trim().replace(/^./, (c) => c.toUpperCase()), html`<p class="list__glavno">${odg}</p>`);
+    return odg;
+  }
+  let pitanjeIzAdrese = new URLSearchParams(location.search).get('pitaj');
 
   /* --- Widget (Android) --- */
   let widget: ((p: PodaciWidgeta) => void) | null = null;
@@ -853,6 +879,7 @@ export function pokreniApp(korijen: HTMLElement, skladiste: Skladiste): Aplikaci
     postaviAzuriranje(a: Azuriranje) {
       azuriranje = a;
     },
+    pitaj,
     postaviWidget(fn: (p: PodaciWidgeta) => void) {
       widget = fn;
       posaljiWidgetu(skladiste.daj());

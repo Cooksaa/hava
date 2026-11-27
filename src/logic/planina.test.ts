@@ -58,6 +58,18 @@ describe('presudaVrha', () => {
   });
 });
 
+describe('svjetlo', () => {
+  it('ljeti od izlaska do zalaska, ne samo 7–17h', () => {
+    const dani = [
+      { datum: '2026-07-10', izlazak: '2026-07-10T05:10', zalazak: '2026-07-10T20:30' },
+      { datum: '2026-07-11', izlazak: '2026-07-11T05:11', zalazak: '2026-07-11T20:29' },
+    ];
+    const r = presudaVrha(BJEL, sati(() => ({})), '2026-07-10T05:20', dani);
+    expect(r?.sati[0]!.sat.sat).toBe(5);
+    expect(r?.sati[r.sati.length - 1]!.sat.sat).toBe(19);
+  });
+});
+
 describe('najbliziVrh', () => {
   it('iz Mostara Velež, iz Sarajeva Jahorina (bliža od Bjelašnice)', () => {
     expect(najbliziVrh(43.34, 17.81).planina).toBe('Velež');
