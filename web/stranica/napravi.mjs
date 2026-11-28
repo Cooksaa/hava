@@ -17,13 +17,14 @@ const zajedno = {
 };
 const zamijeni = (s, m) => Object.entries(m).reduce((a, [k, v]) => a.split(k).join(v), s);
 
-const pregled = zamijeni(izvor, { ...zajedno, '{{IMG}}': 'slike/' });
+const pregled = zamijeni(izvor, { ...zajedno, '{{IMG}}': 'slike/', '{{VIDEO}}': '../video/' });
 writeFileSync(
   join(D, 'pregled.html'),
   `<!doctype html><html lang="bs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Hava</title><style>body{margin:0;background:#0a1322}</style></head><body>${pregled}</body></html>`,
 );
 
-let wp = zamijeni(izvor, { ...zajedno, '{{IMG}}': `https://alemcoksa.com/wp-content/uploads/${mjesec}/` });
+const mediji = `https://alemcoksa.com/wp-content/uploads/${mjesec}/`;
+let wp = zamijeni(izvor, { ...zajedno, '{{IMG}}': mediji, '{{VIDEO}}': mediji });
 wp = wp
   .replace(/\/\*[\s\S]*?\*\//g, '')
   .replace(/\r?\n\s*/g, ' ')
