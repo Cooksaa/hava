@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="bs">
+<head>
+<meta charset="utf-8">
+<title>Hava video</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&display=block">
+<!--
+  Hava promo, 9:16, 1080×1920, 25 s, petlja. setT(t) crta kadar u trenutku t (sekunde); bez CSS
+  tranzicija, pa je svaki kadar ponovljiv. Ekrani su pravi (web/pokazno/ekran-*.png), snimljeni
+  scenarijem web/pokazno/scenarij.js. Snimanje: web/video/README.md.
+-->
+<style>
+  html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#0a1322}
+  body{font-family:'Bricolage Grotesque',system-ui,sans-serif;color:#fff;-webkit-font-smoothing:antialiased}
+  #nebo{position:absolute;inset:0}
+  #kisa{position:absolute;inset:0}
+  .sloj{position:absolute;left:0;right:0}
+  #pitanje{top:170px;padding:0 90px;font-size:76px;line-height:1.05;font-weight:500;letter-spacing:-.02em}
+  #odgovor{top:0;left:90px;right:auto;max-width:820px;padding:30px 38px 34px;border-radius:40px;background:rgb(255 255 255 / .14);border:2px solid rgb(255 255 255 / .26);box-shadow:0 2px 0 rgb(255 255 255 / .3) inset,0 30px 60px -30px rgb(0 0 0 / .4);-webkit-backdrop-filter:blur(24px) saturate(140%);backdrop-filter:blur(24px) saturate(140%)}
+  #odgovor b{display:block;font-size:56px;line-height:1.1;font-weight:600;letter-spacing:-.01em}
+  #odgovor span{display:block;margin-top:12px;font-size:30px;color:rgb(255 255 255 / .8)}
+  #oznaka{top:110px;padding:0 90px;font-size:30px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgb(255 255 255 / .78)}
+  #tel{position:absolute;left:50%;width:600px;height:1262px;margin-left:-300px;padding:16px;border-radius:84px;background:#0b0f16;box-shadow:0 2px 0 rgb(255 255 255 / .18) inset,0 60px 120px -40px rgb(4 10 24 / .6);box-sizing:border-box}
+  #ekran{position:relative;width:100%;height:100%;border-radius:68px;overflow:hidden;background:#1f5aa6}
+  #ekran img{position:absolute;left:0;top:0;width:100%;height:auto}
+  #kraj{inset:0;display:flex;flex-direction:column;justify-content:center;padding:0 90px}
+  #kraj .ime{display:flex;align-items:center;gap:26px;font-size:120px;font-weight:600;letter-spacing:-.03em}
+  #kraj .ime svg{width:120px;height:120px}
+  #kraj .moto{margin-top:40px;font-size:84px;line-height:1.02;font-weight:600;letter-spacing:-.03em;max-width:9.5em}
+  #kraj .info{margin-top:56px;font-size:36px;line-height:1.5;color:rgb(255 255 255 / .82)}
+  #kraj .info b{color:#fff;font-weight:600}
+  #kraj .coksa{position:absolute;bottom:110px;left:90px;font-size:34px;font-weight:700;letter-spacing:.2em}
+  #kraj .coksa i{font-style:normal;color:#FF5A1F}
+  #kraj .dugme{display:inline-flex;align-self:flex-start;margin-top:52px;padding:26px 44px;border-radius:999px;background:#FF5A1F;color:#0b1a2b;font-size:40px;font-weight:600}
+</style>
+</head>
+<body>
+<canvas id="nebo" width="1080" height="1920"></canvas>
+<canvas id="kisa" width="1080" height="1920"></canvas>
+<div class="sloj" id="oznaka"></div>
+<div class="sloj" id="pitanje"></div>
+<div id="tel"><div id="ekran"><img id="a" alt=""><img id="b" alt=""><img id="p" alt=""></div></div>
+<div class="sloj" id="odgovor"><b></b><span></span></div>
+<div class="sloj" id="kraj">
+  <div class="ime"><svg viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#fff" fill-opacity=".16"/><path d="M20 40a10 10 0 0 1 1.2-19.9A13 13 0 0 1 46 24a8 8 0 0 1-2 16z" fill="none" stroke="#fff" stroke-width="3.4" stroke-linejoin="round"/></svg>Hava</div>
+  <div class="moto">Prognoza koja ti kaže možeš li.</div>
+  <div class="dugme">Preuzmi besplatno</div>
+  <div class="info">Za Android i u pregledniku.<br><b>alemcoksa.com/aplikacije/hava</b></div>
+  <div class="coksa">COKS<i>A</i></div>
+</div>
+<script>
+const TRAJANJE = 25;
+// Nebo kroz dan (boje iz aplikacije, src/ui/palete.ts): [vrijeme, gore, sredina, dolje]
+const NEBA = [
+  [0, '#1f5aa6', '#3774bd', '#5a95d6'],
+  [5.5, '#1f5aa6', '#3774bd', '#5a95d6'],
+  [10, '#3a6aa6', '#4f78a8', '#7d9cc0'],
+  [14.5, '#4c5d6e', '#627384', '#8493a0'],
+  [19, '#2b3a67', '#a85f72', '#dc9a70'],
+  [21, '#0a1322', '#121e36', '#1c2b48'],
+  [25, '#0a1322', '#121e36', '#1c2b48'],
+];
+// Kadrovi: od, do, oznaka, pitanje, odgovor, ispod odgovora, ekran(i)
+const KADROVI = [
+  { od: 0.0, do: 5.5, oznaka: 'Jutro', pitanje: 'Kad da palim mašinu?', odg: 'Pali mašinu do 9h, kiša od 15h.', ispod: 'Čapljina, 7:40', ekran: ['ekran-pocetni'] },
+  { od: 5.5, do: 10.3, oznaka: 'Podne', pitanje: 'Mogu li danas dići dron?', odg: 'Leti sad, mirno do 15h.', ispod: 'Vjetar na 80 i 120 m', ekran: ['ekran-dron-detalji'] },
+  { od: 10.3, do: 15.2, oznaka: 'Popodne', pitanje: 'Hoće li padati do Sarajeva?', odg: 'Do Sarajeva suho cijelim putem.', ispod: '155 km, oko 2 h 40 min', ekran: ['ekran-put-mapa', 'ekran-put-karta'] },
+  { od: 15.2, do: 20.2, oznaka: 'Veče', pitanje: 'Može li roštilj večeras?', odg: 'Večeras može, ali moguća kiša.', ispod: 'Roštilj i vani', ekran: ['ekran-dron-kartica'] },
+];
+const SLIKE = 'http://localhost:5173/web/pokazno/';
+
+const c = (x) => Math.min(1, Math.max(0, x));
+const izlaz = (x) => 1 - Math.pow(1 - c(x), 3);        // ease-out
+const uIzlaz = (x) => { x = c(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const mijesaj = (a, b, k) => { const x = hex(a), y = hex(b); return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * k)).join(',')})`; };
+
+const nebo = document.getElementById('nebo').getContext('2d');
+const kisa = document.getElementById('kisa').getContext('2d');
+const $ = (id) => document.getElementById(id);
+
+function crtajNebo(t) {
+  let i = 0; while (i < NEBA.length - 2 && t >= NEBA[i + 1][0]) i++;
+  const [t0, ...a] = NEBA[i]; const [t1, ...b] = NEBA[i + 1];
+  const k = uIzlaz((t - t0) / (t1 - t0));
+  const g = nebo.createLinearGradient(0, 0, 0, 1920);
+  g.addColorStop(0, mijesaj(a[0], b[0], k)); g.addColorStop(.55, mijesaj(a[1], b[1], k)); g.addColorStop(1, mijesaj(a[2], b[2], k));
+  nebo.fillStyle = g; nebo.fillRect(0, 0, 1080, 1920);
+  // blagi sjaj sunca gore lijevo ujutro, nestaje do podne
+  const sunce = 1 - c(t / 9);
+  if (sunce > 0) {
+    const s = nebo.createRadialGradient(160, 120, 0, 160, 120, 900);
+    s.addColorStop(0, `rgba(255,255,255,${.22 * sunce})`); s.addColorStop(1, 'rgba(255,255,255,0)');
+    nebo.fillStyle = s; nebo.fillRect(0, 0, 1080, 1920);
+  }
+}
+
+// Kiša od ~13.5 s do 19.5 s: kose crte, deterministički po t.
+function crtajKisu(t) {
+  kisa.clearRect(0, 0, 1080, 1920);
+  const jacina = c((t - 13.2) / 1.2) * (1 - c((t - 18.8) / 1.0));
+  if (jacina <= 0) return;
+  kisa.strokeStyle = `rgba(179,219,255,${.28 * jacina})`; kisa.lineWidth = 2; kisa.lineCap = 'round';
+  for (let i = 0; i < 140; i++) {
+    const x0 = (i * 97.13) % 1180 - 50, brzina = 1500 + (i * 37) % 600, faza = (i * 0.137) % 1;
+    const y = ((t * brzina + faza * 2200) % 2200) - 140;
+    const x = x0 - y * 0.12;
+    kisa.beginPath(); kisa.moveTo(x, y); kisa.lineTo(x - 7, y + 58); kisa.stroke();
+  }
+}
+
+let ucitano = {};
+function slika(el, ime) { if (el.dataset.ime !== ime) { el.src = SLIKE + ime + '.png'; el.dataset.ime = ime; } }
+
+function setT(t) {
+  t = ((t % TRAJANJE) + TRAJANJE) % TRAJANJE;
+  crtajNebo(t); crtajKisu(t);
+  const k = KADROVI.find((x) => t >= x.od && t < x.do);
+  $('kraj').style.opacity = izlaz((t - 20.6) / 0.8);
+  $('kraj').style.transform = `translateY(${(1 - izlaz((t - 20.6) / 0.9)) * 40}px)`;
+  const tel = $('tel');
+  if (!k) {
+    // završni kadar: telefon odlazi dole, tekstovi nestaju
+    const i = izlaz((t - 20.2) / 0.8);
+    tel.style.top = `${430 + Math.sin(t * .9) * 8 + i * 1600}px`; tel.style.transform = `rotate(${i * 6}deg)`;
+    for (const id of ['oznaka', 'pitanje', 'odgovor']) $(id).style.opacity = 0;
+    return;
+  }
+  const u = t - k.od, d = k.do - k.od;
+  // ulaz i izlaz kadra (prvi kadar ulazi samo tekstom, telefon je već tu da se petlja ne vidi)
+  const ul = k.od === 0 ? 1 : izlaz(u / .55), iz = 1 - izlaz((u - (d - .45)) / .45);
+  const vidljivost = Math.min(ul, iz);
+  $('oznaka').textContent = k.oznaka;
+  $('pitanje').textContent = k.pitanje;
+  $('odgovor').querySelector('b').textContent = k.odg;
+  $('odgovor').querySelector('span').textContent = k.ispod;
+  const p = izlaz((u - .15) / .5), o = izlaz((u - 1.25) / .5);
+  $('oznaka').style.opacity = vidljivost; $('oznaka').style.transform = `translateY(${(1 - p) * 24}px)`;
+  $('pitanje').style.opacity = Math.min(p, iz); $('pitanje').style.transform = `translateY(${(1 - p) * 30}px)`;
+  $('odgovor').style.opacity = Math.min(o, iz);
+  $('odgovor').style.top = `${1290 + (1 - o) * 40}px`;
+  $('odgovor').style.transform = `scale(${.96 + .04 * o})`;
+  $('odgovor').style.transformOrigin = 'left top';
+  // telefon stoji ispod pitanja i lagano plovi; mijenja se samo ekran u njemu
+  tel.style.top = `${430 + Math.sin(t * .9) * 8}px`;
+  tel.style.transform = `rotate(${Math.sin(t * .6) * .6}deg)`;
+  tel.style.opacity = 1;
+  // ekran: novi se pretopi preko zadnjeg ekrana prethodnog kadra; dva ekrana (put): drugi preuzme na pola
+  const prije = KADROVI[KADROVI.indexOf(k) - 1];
+  const [e1, e2] = k.ekran;
+  slika($('a'), e1);
+  if (e2) slika($('b'), e2);
+  $('b').style.display = e2 ? 'block' : 'none';
+  $('b').style.opacity = e2 ? izlaz((u - d * .52) / .45) : 0;
+  const pr = $('p');
+  if (prije) slika(pr, prije.ekran[prije.ekran.length - 1]);
+  pr.style.display = prije ? 'block' : 'none';
+  pr.style.opacity = prije ? 1 - izlaz(u / .6) : 0;
+}
+window.setT = setT;
+window.spremno = Promise.all([
+  document.fonts.ready,
+  ...['ekran-pocetni', 'ekran-dron-detalji', 'ekran-put-mapa', 'ekran-put-karta', 'ekran-dron-kartica'].map((i) => new Promise((r) => { const im = new Image(); im.onload = im.onerror = r; im.src = SLIKE + i + '.png'; })),
+]);
+setT(Number(new URLSearchParams(location.search).get('t') ?? 2));
+</script>
+</body>
+</html>

@@ -13,3 +13,12 @@ Thumbs.db
 
 # Vercel izlaz (npm run server)
 .vercel
+
+# Video i probni snimci (prave se ponovo, vidi web/video/README.md)
+web/video/okviri/
+web/video/*.mp4
+web/video/*.jpg
+web/video/zvuk.wav
+web/pokazno/*.png
+web/stranica/pregled.html
+web/stranica/pregled-*.jpg
